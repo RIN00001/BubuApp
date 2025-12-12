@@ -15,7 +15,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             TodoListAppTheme {
-                // TODO: add routers here
                 TodoListApp()
             }
         }

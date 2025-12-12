@@ -4,62 +4,67 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.example.todolistapp.repositories.AuthenticationRepository
 import com.example.todolistapp.repositories.AuthenticationRepositoryInterface
-import com.example.todolistapp.repositories.TodoRepository
-import com.example.todolistapp.repositories.TodoRepositoryInterface
 import com.example.todolistapp.repositories.UserRepository
 import com.example.todolistapp.repositories.UserRepositoryInterface
 import com.example.todolistapp.services.AuthenticationAPIService
-import com.example.todolistapp.services.TodoAPIService
+import com.example.todolistapp.Interceptor.TokenInterceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
+
+
 interface AppContainerInterface {
     val authenticationRepository: AuthenticationRepositoryInterface
     val userRepository: UserRepositoryInterface
-    val todoRepository: TodoRepositoryInterface
 }
 
-class AppContainer (
+class AppContainer(
     private val dataStore: DataStore<Preferences>
-): AppContainerInterface {
-//    private val backendURL = "http://192.186.12.0:3000/"
-    private val backendURL = "http://192.168.18.113:3000/"
+) : AppContainerInterface {
 
-    // RETROFIT SERVICE
+    // Emulator-friendly localhost
+    private val backendURL = "http://10.0.2.2:3000/"
+
+    // User Repository MUST be initialized first
+    private val _userRepository: UserRepositoryInterface by lazy {
+        UserRepository(dataStore)
+    }
+
+    // Retrofit Services ----------------------------------------
+
     private val authenticationRetrofitService: AuthenticationAPIService by lazy {
-        val retrofit = initRetrofit()
-
+        val retrofit = initRetrofit(_userRepository)
         retrofit.create(AuthenticationAPIService::class.java)
     }
 
-    private val todoAPIService: TodoAPIService by lazy {
-        val retrofit = initRetrofit()
+    // Repositories ---------------------------------------------
 
-        retrofit.create(TodoAPIService::class.java)
-    }
-
-    // REPOSITORY INIT
     override val authenticationRepository: AuthenticationRepositoryInterface by lazy {
         AuthenticationRepository(authenticationRetrofitService)
     }
 
-    override val userRepository: UserRepositoryInterface by lazy {
-        UserRepository(dataStore)
-    }
+    override val userRepository: UserRepositoryInterface
+        get() = _userRepository
 
-    override val todoRepository: TodoRepositoryInterface by lazy {
-        TodoRepository(todoAPIService)
-    }
+    // Retrofit Initialization ----------------------------------
 
-    private fun initRetrofit(): Retrofit {
-        val logging = HttpLoggingInterceptor()
-        logging.level = (HttpLoggingInterceptor.Level.BODY)
+    private fun initRetrofit(userRepository: UserRepositoryInterface): Retrofit {
+
+        val logging = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
 
         val client = OkHttpClient.Builder()
-        client.addInterceptor(logging)
+            .addInterceptor(logging)
+            .addInterceptor(TokenInterceptor(userRepository)) // ← NEW interceptor
+            .build()
 
-        return Retrofit.Builder().addConverterFactory(GsonConverterFactory.create()).client(client.build()).baseUrl(backendURL).build()
+        return Retrofit.Builder()
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .baseUrl(backendURL)
+            .build()
     }
 }
