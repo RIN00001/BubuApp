@@ -1,7 +1,11 @@
 package com.example.todolistapp.viewModels
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.todolistapp.BubuApplication
 import com.example.todolistapp.models.BookCreateRequest
 import com.example.todolistapp.models.ErrorModel
 import com.example.todolistapp.repositories.BookRepositoryInterface
@@ -209,9 +213,27 @@ class BookViewModel(
         }
     }
 
-    // ----------------------------------
+
     // Resetters (for Compose UI later)
-    // ----------------------------------
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val application =
+                    (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]
+                            as BubuApplication)
+
+                val bookRepository = application.container.bookRepository
+                val userRepository = application.container.userRepository
+
+                BookViewModel(
+                    bookRepository = bookRepository,
+                    userRepository = userRepository
+                )
+            }
+        }
+    }
+
     fun resetListState() { _listState.value = BookListStatusUIState.Start }
     fun resetDetailState() { _detailState.value = BookDetailStatusUIState.Start }
     fun resetMutationState() { _mutationState.value = BookMutationStatusUIState.Start }

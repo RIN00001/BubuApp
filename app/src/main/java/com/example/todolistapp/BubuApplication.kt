@@ -10,7 +10,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     name = "user_data"
 )
 
-class TodoListApplication: Application() {
+class BubuApplication: Application() {
     lateinit var container: AppContainer
 
     override fun onCreate() {

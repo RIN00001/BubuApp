@@ -2,55 +2,81 @@ package com.example.todolistapp
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.example.todolistapp.Interceptor.TokenInterceptor
 import com.example.todolistapp.repositories.AuthenticationRepository
 import com.example.todolistapp.repositories.AuthenticationRepositoryInterface
 import com.example.todolistapp.repositories.UserRepository
 import com.example.todolistapp.repositories.UserRepositoryInterface
+import com.example.todolistapp.repositories.BookRepository
+import com.example.todolistapp.repositories.BookRepositoryInterface
+import com.example.todolistapp.repositories.WalletRepository
+import com.example.todolistapp.repositories.WalletRepositoryInterface
 import com.example.todolistapp.services.AuthenticationAPIService
-import com.example.todolistapp.Interceptor.TokenInterceptor
+import com.example.todolistapp.services.BookAPIService
+import com.example.todolistapp.services.WalletAPIService
+
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-
-
 interface AppContainerInterface {
     val authenticationRepository: AuthenticationRepositoryInterface
     val userRepository: UserRepositoryInterface
+
+    // NEW MODULES
+    val bookRepository: BookRepositoryInterface
+    val walletRepository: WalletRepositoryInterface
 }
 
-class AppContainer(
+class AppContainer (
     private val dataStore: DataStore<Preferences>
 ) : AppContainerInterface {
 
-    // Emulator-friendly localhost
     private val backendURL = "http://10.0.2.2:3000/"
 
-    // User Repository MUST be initialized first
+    // FIRST: USER REPO (required for TokenInterceptor)
     private val _userRepository: UserRepositoryInterface by lazy {
         UserRepository(dataStore)
     }
 
-    // Retrofit Services ----------------------------------------
+    // RETROFIT SERVICES -----------------------------------------------------
 
-    private val authenticationRetrofitService: AuthenticationAPIService by lazy {
+    private val authenticationService: AuthenticationAPIService by lazy {
         val retrofit = initRetrofit(_userRepository)
         retrofit.create(AuthenticationAPIService::class.java)
     }
 
-    // Repositories ---------------------------------------------
+    private val bookService: BookAPIService by lazy {
+        val retrofit = initRetrofit(_userRepository)
+        retrofit.create(BookAPIService::class.java)
+    }
+
+    private val walletService: WalletAPIService by lazy {
+        val retrofit = initRetrofit(_userRepository)
+        retrofit.create(WalletAPIService::class.java)
+    }
+
+    // REPOSITORIES ----------------------------------------------------------
 
     override val authenticationRepository: AuthenticationRepositoryInterface by lazy {
-        AuthenticationRepository(authenticationRetrofitService)
+        AuthenticationRepository(authenticationService)
     }
 
     override val userRepository: UserRepositoryInterface
         get() = _userRepository
 
-    // Retrofit Initialization ----------------------------------
+    override val bookRepository: BookRepositoryInterface by lazy {
+        BookRepository(bookService)
+    }
 
-    private fun initRetrofit(userRepository: UserRepositoryInterface): Retrofit {
+    override val walletRepository: WalletRepositoryInterface by lazy {
+        WalletRepository(walletService)
+    }
+
+    // RETROFIT INITIALIZATION ----------------------------------------------
+
+    private fun initRetrofit(userRepo: UserRepositoryInterface): Retrofit {
 
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -58,13 +84,13 @@ class AppContainer(
 
         val client = OkHttpClient.Builder()
             .addInterceptor(logging)
-            .addInterceptor(TokenInterceptor(userRepository)) // ← NEW interceptor
+            .addInterceptor(TokenInterceptor(userRepo)) // Injects "Bearer token"
             .build()
 
         return Retrofit.Builder()
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
             .baseUrl(backendURL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .client(client)
             .build()
     }
 }

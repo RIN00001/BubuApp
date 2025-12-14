@@ -22,11 +22,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import com.example.todolistapp.R
-import com.example.todolistapp.TodoListApplication
 import com.example.todolistapp.uiStates.AuthenticatonStatusUIState
 import kotlinx.coroutines.launch
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import com.auth0.android.jwt.JWT
+import com.example.todolistapp.BubuApplication
 import com.example.todolistapp.enums.PagesEnum
 import com.example.todolistapp.models.ErrorModel
 import com.example.todolistapp.models.UserResponse
@@ -285,7 +285,7 @@ class AuthenticationViewModel(
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                val application = (this[APPLICATION_KEY] as TodoListApplication)
+                val application = (this[APPLICATION_KEY] as BubuApplication)
                 val authenticationRepository = application.container.authenticationRepository
                 val userRepository = application.container.userRepository
                 AuthenticationViewModel(authenticationRepository, userRepository)
