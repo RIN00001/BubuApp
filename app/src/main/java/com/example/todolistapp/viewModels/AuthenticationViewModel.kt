@@ -136,7 +136,7 @@ class AuthenticationViewModel(
     }
 
     fun checkRegisterForm() {
-        if (emailInput.isNotEmpty() && passwordInput.isNotEmpty() && usernameInput.isNotEmpty() && confirmPasswordInput.isNotEmpty() && passwordInput == confirmPasswordInput) {
+        if (emailInput.isNotEmpty() && passwordInput.isNotEmpty() && usernameInput.isNotEmpty()) {
             _authenticationUIState.update { currentState ->
                 currentState.copy(
                     buttonEnabled = true
@@ -199,7 +199,7 @@ class AuthenticationViewModel(
 
                             resetViewModel()
 
-                            navController.navigate(PagesEnum.Home.name) {
+                            navController.navigate(PagesEnum.Books.name) {
                                 popUpTo(PagesEnum.Login.name) {
                                     inclusive = true
                                 }
@@ -246,7 +246,7 @@ class AuthenticationViewModel(
 
                             resetViewModel()
 
-                            navController.navigate(PagesEnum.Home.name) {
+                            navController.navigate(PagesEnum.Books.name) {
                                 popUpTo(PagesEnum.Login.name) {
                                     inclusive = true
                                 }

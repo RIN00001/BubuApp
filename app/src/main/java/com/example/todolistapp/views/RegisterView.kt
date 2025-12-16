@@ -2,14 +2,25 @@ package com.example.todolistapp.views
 
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,7 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -32,15 +43,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.example.todolistapp.R
-import com.example.todolistapp.enums.PagesEnum
 import com.example.todolistapp.ui.theme.TodoListAppTheme
 import com.example.todolistapp.uiStates.AuthenticatonStatusUIState
 import com.example.todolistapp.viewModels.AuthenticationViewModel
-import com.example.todolistapp.views.templates.AuthenticationButton
-import com.example.todolistapp.views.templates.AuthenticationQuestion
-import com.example.todolistapp.views.templates.AuthenticationOutlinedTextField
-import com.example.todolistapp.views.templates.PasswordOutlinedTextField
 
 @Composable
 fun RegisterView(
@@ -61,154 +66,211 @@ fun RegisterView(
         }
     }
 
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.SpaceEvenly,
+    Box(
+        modifier = modifier.fillMaxSize()
     ) {
-        Column(
-            horizontalAlignment = Alignment.Start
+        // Purple curved header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
+                .background(
+                    color = Color(0xFF9B8FC7),
+                    shape = RoundedCornerShape(bottomStart = 50.dp, bottomEnd = 50.dp)
+                ),
+            contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "WELCOME TO",
-                fontSize = 35.sp,
-                fontWeight = FontWeight.Light
-            )
-
-            Text(
-                text = "TODO LIST",
-                fontSize = 35.sp,
-                fontWeight = FontWeight.Bold
+                text = "Sign Up",
+                fontSize = 40.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
         }
 
+        // Form content
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 320.dp)
+                .padding(horizontal = 32.dp),
+            verticalArrangement = Arrangement.Top
         ) {
-
-            AuthenticationOutlinedTextField(
-                inputValue = authenticationViewModel.emailInput,
-                onInputValueChange = {
-                    authenticationViewModel.changeEmailInput(it)
-                    authenticationViewModel.checkRegisterForm()
-                },
-                labelText = stringResource(id = R.string.emailText),
-                placeholderText = stringResource(id = R.string.emailText),
-                leadingIconSrc = painterResource(id = R.drawable.ic_email),
-                modifier = Modifier
-                    .fillMaxWidth(),
-                keyboardType = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next
-                ),
-                onKeyboardNext = KeyboardActions(
-                    onNext = {
-                        focusManager.moveFocus(FocusDirection.Down)
-                    }
-                )
+            // Username field
+            Text(
+                text = "Username",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
-
-            Spacer(modifier = Modifier.padding(5.dp))
-
-            AuthenticationOutlinedTextField(
-                inputValue = authenticationViewModel.usernameInput,
-                onInputValueChange = {
+            OutlinedTextField(
+                value = authenticationViewModel.usernameInput,
+                onValueChange = {
                     authenticationViewModel.changeUsernameInput(it)
                     authenticationViewModel.checkRegisterForm()
                 },
-                labelText = stringResource(id = R.string.usernameText),
-                placeholderText = stringResource(id = R.string.usernameText),
-                leadingIconSrc = painterResource(id = R.drawable.ic_username),
-                modifier = Modifier
-                    .fillMaxWidth(),
-                keyboardType = KeyboardOptions(
+                placeholder = { Text("Lacrimosa", color = Color.Gray) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Black,
+                    focusedBorderColor = Color.Black,
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White
+                ),
+                keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Next
                 ),
-                onKeyboardNext = KeyboardActions(
+                keyboardActions = KeyboardActions(
                     onNext = {
                         focusManager.moveFocus(FocusDirection.Down)
                     }
-                )
+                ),
+                singleLine = true
             )
 
-            Spacer(modifier = Modifier.padding(5.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // TODO: use the pre-made template for password input design from the AuthenticationTemplate file
-            PasswordOutlinedTextField(
-                passwordInput = authenticationViewModel.passwordInput,
-                onPasswordInputValueChange = {
+            // Email field
+            Text(
+                text = "Email",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            OutlinedTextField(
+                value = authenticationViewModel.emailInput,
+                onValueChange = {
+                    authenticationViewModel.changeEmailInput(it)
+                    authenticationViewModel.checkRegisterForm()
+                },
+                placeholder = { Text("Lacrimosa@gmail.com", color = Color.Gray) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Black,
+                    focusedBorderColor = Color.Black,
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = {
+                        focusManager.moveFocus(FocusDirection.Down)
+                    }
+                ),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Password field
+            Text(
+                text = "Password",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            OutlinedTextField(
+                value = authenticationViewModel.passwordInput,
+                onValueChange = {
                     authenticationViewModel.changePasswordInput(it)
                     authenticationViewModel.checkRegisterForm()
                 },
-                passwordVisibilityIcon = painterResource(id = registerUIState.passwordVisibilityIcon),
-                labelText = stringResource(id = R.string.passwordText),
-                placeholderText = stringResource(id = R.string.passwordText),
-                onTrailingIconClick = {
-                    authenticationViewModel.changePasswordVisibility()
-                },
-                passwordVisibility = registerUIState.passwordVisibility,
-                modifier = Modifier
-                    .fillMaxWidth(),
-                keyboardImeAction = ImeAction.Next,
-                onKeyboardNext = KeyboardActions(
-                    onNext = {
-                        focusManager.moveFocus(FocusDirection.Down)
+                placeholder = { Text("***********", color = Color.Gray) },
+                visualTransformation = registerUIState.passwordVisibility,
+                trailingIcon = {
+                    IconButton(onClick = { authenticationViewModel.changePasswordVisibility() }) {
+                        Icon(
+                            painter = painterResource(id = registerUIState.passwordVisibilityIcon),
+                            contentDescription = "Toggle password visibility"
+                        )
                     }
-                )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Black,
+                    focusedBorderColor = Color.Black,
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        if (registerUIState.buttonEnabled) {
+                            authenticationViewModel.register(navController)
+                        }
+                    }
+                ),
+                singleLine = true
             )
 
-            Spacer(modifier = Modifier.padding(5.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // TODO: use the pre-made template for password input design from the AuthenticationTemplate file
-            PasswordOutlinedTextField(
-                passwordInput = authenticationViewModel.confirmPasswordInput,
-                onPasswordInputValueChange = {
-                    authenticationViewModel.changeConfirmPasswordInput(it)
-                    authenticationViewModel.checkRegisterForm()
-                },
-                passwordVisibilityIcon = painterResource(id = registerUIState.confirmPasswordVisibilityIcon),
-                labelText = stringResource(id = R.string.confirm_password_text),
-                placeholderText = stringResource(id = R.string.confirm_password_text),
-                onTrailingIconClick = {
-                    authenticationViewModel.changeConfirmPasswordVisibility()
-                },
-                passwordVisibility = registerUIState.confirmPasswordVisibility,
-                modifier = Modifier
-                    .fillMaxWidth(),
-                keyboardImeAction = ImeAction.None,
-                onKeyboardNext = KeyboardActions(
-                    onDone = null
-                )
-            )
-
-            AuthenticationButton(
-                buttonText = stringResource(id = R.string.registerText),
-                onButtonClick = {
+            // Continue button
+            Button(
+                onClick = {
                     authenticationViewModel.register(navController)
                 },
-                buttonModifier = Modifier
-                    .padding(top = 30.dp),
-                textModifier = Modifier
-                    .padding(vertical = 5.dp, horizontal = 15.dp),
-                buttonEnabled = registerUIState.buttonEnabled,
-                buttonColor = authenticationViewModel.checkButtonEnabled(registerUIState.buttonEnabled)
-            )
-        }
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF9B8FC7),
+                    disabledContainerColor = Color(0xFF9B8FC7).copy(alpha = 0.5f)
+                ),
+                enabled = registerUIState.buttonEnabled
+            ) {
+                Text(
+                    text = "Continue",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White
+                )
+            }
 
-        AuthenticationQuestion(
-            questionText = stringResource(id = R.string.already_have_an_account_text),
-            actionText = stringResource(id = R.string.sign_in_text),
-            onActionTextClicked = {
-                authenticationViewModel.resetViewModel()
-                navController.navigate(PagesEnum.Login.name) {
-                    popUpTo(PagesEnum.Register.name) {
-                        inclusive = true
-                    }
-                }
-            },
-            rowModifier = Modifier
-                .align(Alignment.CenterHorizontally)
-        )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // "Atau" text
+            Text(
+                text = "Atau",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Normal,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Guest login button
+            OutlinedButton(
+                onClick = {
+                    // TODO: Implement guest login
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = Color(0xFF9B8FC7),
+                    contentColor = Color.White
+                )
+            ) {
+                Text(
+                    text = "Login sebagai tamu",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
     }
 }
 
@@ -220,12 +282,11 @@ fun RegisterView(
 fun RegisterViewPreview() {
     TodoListAppTheme {
         RegisterView(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp),
+            modifier = Modifier.fillMaxSize(),
             authenticationViewModel = viewModel(),
             navController = rememberNavController(),
             context = LocalContext.current
         )
     }
 }
+

@@ -21,6 +21,9 @@ import retrofit2.Callback
 import retrofit2.Response
 import okio.IOException
 
+
+
+
 class BookViewModel(
     private val bookRepository: BookRepositoryInterface,
     private val userRepository: UserRepositoryInterface
@@ -31,7 +34,7 @@ class BookViewModel(
     // DETAIL STATE
     private val _detailState = MutableStateFlow<BookDetailStatusUIState>(BookDetailStatusUIState.Start)
     val detailState: StateFlow<BookDetailStatusUIState> = _detailState.asStateFlow()
-    // MUTATION STATE (create/update/delete)
+    // M STATE (create/update/delete)
     private val _mutationState = MutableStateFlow<BookMutationStatusUIState>(BookMutationStatusUIState.Start)
     val mutationState: StateFlow<BookMutationStatusUIState> = _mutationState.asStateFlow()
     fun fetchBooks() {
@@ -142,9 +145,9 @@ class BookViewModel(
         }
     }
 
-    // -----------------------------
+
     // Update Book
-    // -----------------------------
+
     fun updateBook(bookId: Int, name: String, program: String?, walletIds: List<Int>?) {
         viewModelScope.launch {
             _mutationState.value = BookMutationStatusUIState.Loading

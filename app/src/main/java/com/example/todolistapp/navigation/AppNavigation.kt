@@ -1,7 +1,7 @@
 package com.example.todolistapp.navigation
 
-import android.app.Application
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -9,19 +9,19 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.todolistapp.enums.PagesEnum
-import com.example.todolistapp.uiStates.BookListStatusUIState
 import com.example.todolistapp.viewModels.AuthenticationViewModel
-import com.example.todolistapp.viewModels.BookViewModel
 import com.example.todolistapp.views.LoginView
 import com.example.todolistapp.views.RegisterView
-import com.example.todolistapp.views.home.BookOnboardingView
-import com.example.todolistapp.views.home.BooksList
-import androidx.compose.ui.platform.LocalContext
-import com.example.todolistapp.views.HomeView
-import com.example.todolistapp.views.WalletDetailView
-import com.example.todolistapp.views.components.home.BookDetailView
 import com.example.todolistapp.views.components.wallet.WalletAddEdit
 import com.example.todolistapp.views.components.wallet.WalletListView
+import com.example.todolistapp.views.WalletDetailView
+import com.example.todolistapp.views.components.book.BookDetailView
+import com.example.todolistapp.views.components.book.BooksList
+import com.example.todolistapp.views.BookCreateView
+import androidx.compose.ui.platform.LocalContext
+import com.example.todolistapp.uiStates.AuthenticatonStatusUIState
+import com.example.todolistapp.views.BookMainView
+import com.example.todolistapp.views.WalletView
 
 @Composable
 fun AppNavigation(
@@ -29,13 +29,9 @@ fun AppNavigation(
     navController: NavHostController = rememberNavController()
 ) {
     val context = LocalContext.current
-    val application = context.applicationContext as Application
 
-    val authenticationViewModel: AuthenticationViewModel =
+    val authVM: AuthenticationViewModel =
         viewModel(factory = AuthenticationViewModel.Factory)
-
-    val bookViewModel: BookViewModel =
-        viewModel(factory = BookViewModel.Factory)
 
     NavHost(
         navController = navController,
@@ -43,117 +39,75 @@ fun AppNavigation(
         modifier = modifier
     ) {
 
-        // ---------- LOGIN ----------
+        // ---------- AUTH ----------
         composable(PagesEnum.Login.name) {
             LoginView(
-                authenticationViewModel = authenticationViewModel,
+                authenticationViewModel = authVM,
                 context = context,
                 navController = navController
             )
+
+            if (authVM.authenticationStatus is AuthenticatonStatusUIState.Success) {
+                LaunchedEffect(Unit) {
+                    navController.navigate(PagesEnum.Books.name) {
+                        popUpTo(PagesEnum.Login.name) { inclusive = true }
+                    }
+                    authVM.clearErrorMessage()
+                }
+            }
         }
 
-        // ---------- REGISTER ----------
         composable(PagesEnum.Register.name) {
             RegisterView(
-                authenticationViewModel = authenticationViewModel,
+                authenticationViewModel = authVM,
                 context = context,
                 navController = navController
             )
         }
 
-        // ---------- HOME GATE ----------
-        composable(PagesEnum.Home.name) {
-            val listState by bookViewModel.listState.collectAsState()
-
-            LaunchedEffect(Unit) {
-                bookViewModel.fetchBooks()
-            }
-
-            when (listState) {
-                is BookListStatusUIState.Start,
-                is BookListStatusUIState.Loading -> {
-                    // loading state
-                }
-
-                is BookListStatusUIState.Success -> {
-                    val books = (listState as BookListStatusUIState.Success).data
-
-                    if (books.isEmpty()) {
-                        BookOnboardingView(
-                            bookViewModel = bookViewModel,
-                            onDone = {
-                                navController.navigate(PagesEnum.Home.name) {
-                                    popUpTo(PagesEnum.Home.name) { inclusive = true }
-                                }
-                            }
-                        )
-                    } else {
-                        HomeView(navController = navController)
-                    }
-                }
-
-                is BookListStatusUIState.Failed -> {
-                    BookOnboardingView(
-                        bookViewModel = bookViewModel,
-                        onDone = {
-                            navController.navigate(PagesEnum.Home.name) {
-                                popUpTo(PagesEnum.Home.name) { inclusive = true }
-                            }
-                        }
-                    )
-                }
-            }
+        // ---------- BOOKS (MAIN TAB) ----------
+        composable(PagesEnum.Books.name) {
+            BookMainView(navController)
         }
 
-        // ---------- BOOK ----------
-        composable(PagesEnum.BookList.name) {
-            BooksList(navController = navController)
+        composable("BooksList") {
+            BooksList(navController)
         }
 
-        composable(PagesEnum.BookDetail.name + "/{bookId}") { backStackEntry ->
-            val bookId = backStackEntry.arguments
-                ?.getString("bookId")
-                ?.toIntOrNull()
+        composable(PagesEnum.BookCreate.name) {
+            BookCreateView(navController)
+        }
 
-            if (bookId != null) {
-                BookDetailView(
-                    bookId = bookId,
-                    navController = navController
-                )
+        composable(PagesEnum.BookDetail.name + "/{bookId}") { backStack ->
+            backStack.arguments?.getString("bookId")?.toIntOrNull()?.let {
+                BookDetailView(it, navController)
             }
         }
 
         // ---------- WALLET ----------
-        composable(PagesEnum.WalletList.name) {
-            WalletListView(navController = navController)
+        composable(PagesEnum.Wallet.name) {
+            WalletView(navController)
         }
 
-        composable(PagesEnum.WalletDetail.name + "/{walletId}") { backStackEntry ->
-            val walletId = backStackEntry.arguments
-                ?.getString("walletId")
-                ?.toIntOrNull()
-
-            if (walletId != null) {
-                WalletDetailView(
-                    walletId = walletId,
-                    navController = navController
-                )
+        composable(PagesEnum.WalletDetail.name + "/{walletId}") { backStack ->
+            backStack.arguments?.getString("walletId")?.toIntOrNull()?.let {
+                WalletDetailView(it, navController)
             }
         }
 
         composable(PagesEnum.WalletCreate.name) {
-            WalletAddEdit(navController = navController)
+            WalletAddEdit(navController)
         }
 
-        composable(PagesEnum.WalletEdit.name + "/{walletId}") { backStackEntry ->
-            val walletId = backStackEntry.arguments
-                ?.getString("walletId")
-                ?.toIntOrNull()
-
-            WalletAddEdit(
-                navController = navController,
-                walletId = walletId
-            )
+        composable(PagesEnum.WalletEdit.name + "/{walletId}") { backStack ->
+            backStack.arguments?.getString("walletId")?.toIntOrNull()?.let {
+                WalletAddEdit(navController, it)
+            }
         }
+
+        // ---------- PLACEHOLDERS ----------
+        composable(PagesEnum.Saving.name) { }
+        composable(PagesEnum.Settings.name) { }
     }
 }
+

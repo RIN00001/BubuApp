@@ -1,6 +1,5 @@
 package com.example.todolistapp.models
 
-import com.example.todolistapp.enums.PrioritiesEnum
 import com.google.gson.annotations.SerializedName
 
 data class TodoModel (

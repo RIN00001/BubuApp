@@ -1,27 +1,24 @@
 package com.example.todolistapp.enums
 
 enum class PagesEnum {
-    // AUTHENTICATION
+
+    // AUTH
     Login,
     Register,
 
-    // MAIN HOME
-    Home,
+    // MAIN TABS (BOTTOM NAV)
+    Books,      // MAIN SCREEN (Book dashboard)
+    Wallet,
+    Saving,
+    Settings,
 
-    // BOOK SCREENS (no UI yet, but we need routes)
-    BookList,
+    // BOOK FLOWS (DETAIL / CRUD)
     BookDetail,
     BookCreate,
     BookEdit,
 
-    // WALLET SCREENS (for next module)
-
-    WalletList,
+    // WALLET FLOWS (DETAIL / CRUD)
     WalletDetail,
     WalletCreate,
-    WalletEdit,
-
-    // FUTURE (optional)
-    Profile,
-    Settings
+    WalletEdit
 }

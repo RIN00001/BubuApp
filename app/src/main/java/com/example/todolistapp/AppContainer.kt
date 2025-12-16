@@ -2,7 +2,7 @@ package com.example.todolistapp
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import com.example.todolistapp.Interceptor.TokenInterceptor
+import com.example.todolistapp.interceptor.TokenInterceptor
 import com.example.todolistapp.repositories.AuthenticationRepository
 import com.example.todolistapp.repositories.AuthenticationRepositoryInterface
 import com.example.todolistapp.repositories.UserRepository
@@ -33,7 +33,7 @@ class AppContainer (
     private val dataStore: DataStore<Preferences>
 ) : AppContainerInterface {
 
-    private val backendURL = "http://10.0.2.2:3000/"
+    private val backendURL = "http://192.168.1.4:3000/"
 
     // FIRST: USER REPO (required for TokenInterceptor)
     private val _userRepository: UserRepositoryInterface by lazy {

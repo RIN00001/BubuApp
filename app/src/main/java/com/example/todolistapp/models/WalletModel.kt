@@ -4,7 +4,7 @@ data class WalletModel(
     val id: Int = 0,
     val userId: Int? = null,
     val name: String = "",
-    val balance: Double = 0.0,
+    var balance: Double = 0.0,
     val isDefault: Boolean = false,
     val createdAt: String? = null,
     val updatedAt: String? = null

@@ -1,4 +1,4 @@
-package com.example.todolistapp.Interceptor
+package com.example.todolistapp.interceptor
 
 import com.example.todolistapp.repositories.UserRepositoryInterface
 import kotlinx.coroutines.runBlocking

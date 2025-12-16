@@ -37,7 +37,7 @@ class HomeViewModel(
         }
 
         navController.navigate(PagesEnum.Login.name) {
-            popUpTo(PagesEnum.Home.name) { inclusive = true }
+            popUpTo(PagesEnum.Books.name) { inclusive = true }
         }
     }
 

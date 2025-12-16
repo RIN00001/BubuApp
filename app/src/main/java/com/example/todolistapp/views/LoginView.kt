@@ -2,14 +2,24 @@ package com.example.todolistapp.views
 
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,7 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -37,10 +47,7 @@ import com.example.todolistapp.enums.PagesEnum
 import com.example.todolistapp.ui.theme.TodoListAppTheme
 import com.example.todolistapp.uiStates.AuthenticatonStatusUIState
 import com.example.todolistapp.viewModels.AuthenticationViewModel
-import com.example.todolistapp.views.templates.AuthenticationButton
 import com.example.todolistapp.views.templates.AuthenticationQuestion
-import com.example.todolistapp.views.templates.AuthenticationOutlinedTextField
-import com.example.todolistapp.views.templates.PasswordOutlinedTextField
 
 @Composable
 fun LoginView(
@@ -50,8 +57,6 @@ fun LoginView(
     context: Context
 ) {
     val loginUIState by authenticationViewModel.authenticationUIState.collectAsState()
-    val loginButtonEnabled = authenticationViewModel.checkLoginForm()
-
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(authenticationViewModel.authenticationStatus) {
@@ -63,102 +68,159 @@ fun LoginView(
         }
     }
 
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.SpaceEvenly,
+    Box(
+        modifier = modifier.fillMaxSize()
     ) {
-        Column(
-            horizontalAlignment = Alignment.Start
+        // Purple curved header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
+                .background(
+                    color = Color(0xFF9B8FC7),
+                    shape = RoundedCornerShape(bottomStart = 50.dp, bottomEnd = 50.dp)
+                ),
+            contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "WELCOME BACK TO",
-                fontSize = 35.sp,
-                fontWeight = FontWeight.Light
-            )
-
-            Text(
-                text = "TODO LIST",
-                fontSize = 35.sp,
-                fontWeight = FontWeight.SemiBold
+                text = "Login",
+                fontSize = 40.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
         }
 
+        // Form content
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 320.dp)
+                .padding(horizontal = 32.dp),
+            verticalArrangement = Arrangement.Top
         ) {
-            AuthenticationOutlinedTextField(
-                inputValue = authenticationViewModel.emailInput,
-                onInputValueChange = {
+            // Email field
+            Text(
+                text = "Email",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            OutlinedTextField(
+                value = authenticationViewModel.emailInput,
+                onValueChange = {
                     authenticationViewModel.changeEmailInput(it)
                     authenticationViewModel.checkLoginForm()
                 },
-                labelText = stringResource(id = R.string.emailText),
-                placeholderText = stringResource(id = R.string.emailText),
-                leadingIconSrc = painterResource(id = R.drawable.ic_email),
-                modifier = Modifier
-                    .fillMaxWidth(),
-                keyboardType = KeyboardOptions(
+                placeholder = { Text("Lacrimosa@gmail.com", color = Color.Gray) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Black,
+                    focusedBorderColor = Color.Black,
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White
+                ),
+                keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next
                 ),
-                onKeyboardNext = KeyboardActions(
+                keyboardActions = KeyboardActions(
                     onNext = {
                         focusManager.moveFocus(FocusDirection.Down)
                     }
-                )
+                ),
+                singleLine = true
             )
 
-            Spacer(modifier = Modifier.padding(5.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            PasswordOutlinedTextField(
-                passwordInput = authenticationViewModel.passwordInput,
-                onPasswordInputValueChange = {
+            // Password field
+            Text(
+                text = "Password",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            OutlinedTextField(
+                value = authenticationViewModel.passwordInput,
+                onValueChange = {
                     authenticationViewModel.changePasswordInput(it)
                     authenticationViewModel.checkLoginForm()
                 },
-                passwordVisibilityIcon = painterResource(id = loginUIState.passwordVisibilityIcon),
-                labelText = stringResource(id = R.string.passwordText),
-                placeholderText = stringResource(id = R.string.passwordText),
-                onTrailingIconClick = {
-                    authenticationViewModel.changePasswordVisibility()
+                placeholder = { Text("***********", color = Color.Gray) },
+                visualTransformation = loginUIState.passwordVisibility,
+                trailingIcon = {
+                    IconButton(onClick = { authenticationViewModel.changePasswordVisibility() }) {
+                        Icon(
+                            painter = painterResource(id = loginUIState.passwordVisibilityIcon),
+                            contentDescription = "Toggle password visibility"
+                        )
+                    }
                 },
-                passwordVisibility = loginUIState.passwordVisibility,
-                modifier = Modifier
-                    .fillMaxWidth(),
-                keyboardImeAction = ImeAction.None,
-                onKeyboardNext = KeyboardActions(
-                    onDone = null
-                )
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Black,
+                    focusedBorderColor = Color.Black,
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        if (loginUIState.buttonEnabled) {
+                            authenticationViewModel.login(navController)
+                        }
+                    }
+                ),
+                singleLine = true
             )
 
-            AuthenticationButton(
-                buttonText = stringResource(id = R.string.loginText),
-                onButtonClick = {
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Continue button
+            Button(
+                onClick = {
                     authenticationViewModel.login(navController)
                 },
-                buttonModifier = Modifier
-                    .padding(top = 30.dp),
-                textModifier = Modifier
-                    .padding(vertical = 5.dp, horizontal = 15.dp),
-                buttonEnabled = loginUIState.buttonEnabled,
-                buttonColor = authenticationViewModel.checkButtonEnabled(loginUIState.buttonEnabled)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF9B8FC7),
+                    disabledContainerColor = Color(0xFF9B8FC7).copy(alpha = 0.5f)
+                ),
+                enabled = loginUIState.buttonEnabled
+            ) {
+                Text(
+                    text = "Continue",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Sign up link
+            AuthenticationQuestion(
+                questionText = stringResource(id = R.string.don_t_have_an_account_yet_text),
+                actionText = stringResource(id = R.string.sign_up_text),
+                onActionTextClicked = {
+                    authenticationViewModel.resetViewModel()
+                    navController.navigate(PagesEnum.Register.name) {
+                        popUpTo(PagesEnum.Login.name) {
+                            inclusive = true
+                        }
+                    }
+                },
+                rowModifier = Modifier.align(Alignment.CenterHorizontally)
             )
         }
-
-        AuthenticationQuestion(
-            questionText = stringResource(id = R.string.don_t_have_an_account_yet_text),
-            actionText = stringResource(id = R.string.sign_up_text),
-            onActionTextClicked = {
-                authenticationViewModel.resetViewModel()
-                navController.navigate(PagesEnum.Register.name) {
-                    popUpTo(PagesEnum.Login.name) {
-                        inclusive = true
-                    }
-                }
-            },
-            rowModifier = Modifier
-                .align(Alignment.CenterHorizontally),
-        )
     }
 }
 
@@ -170,12 +232,13 @@ fun LoginView(
 fun LoginViewPreview() {
     TodoListAppTheme {
         LoginView(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp),
+            modifier = Modifier.fillMaxSize(),
             authenticationViewModel = viewModel(),
             navController = rememberNavController(),
             context = LocalContext.current
         )
     }
 }
+
+
+

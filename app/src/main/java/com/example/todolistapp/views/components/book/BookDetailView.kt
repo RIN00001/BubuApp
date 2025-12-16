@@ -1,4 +1,4 @@
-package com.example.todolistapp.views.components.home
+package com.example.todolistapp.views.components.book
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -9,6 +9,21 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.todolistapp.uiStates.BookDetailStatusUIState
 import com.example.todolistapp.viewModels.BookViewModel
+
+
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.rememberNavController
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewBookDetailView() {
+    // You may need to provide a fake BookViewModel or mock state for a full preview
+    BookDetailView(
+        bookId = 1,
+        navController = rememberNavController()
+    )
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
