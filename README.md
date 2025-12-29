@@ -1,4 +1,4 @@
-This is a University Assignment Team Project assestment for a Project Assginment
+This is a University Assignment Team Project assestment for a Project Assignment
 Here are the following people on this team
 Rifki Indra Nugroho / 0706012410033
 Vincent / 0706012410032
