@@ -1,9 +1,8 @@
 package com.example.todolistapp.enums
 
-enum class PagesEnum() {
+enum class PagesEnum {
     Login,
     Register,
     Home,
-    CreateTodo,
-    TodoDetail
+    CreateItem,
 }

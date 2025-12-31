@@ -1,102 +1,76 @@
 package com.example.todolistapp.viewModels
 
-import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.runtime.currentComposer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.datastore.dataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.navigation.NavHostController
-import com.example.todolistapp.uiStates.AuthenticationUIState
+import com.auth0.android.jwt.JWT
+import com.example.todolistapp.R
+import com.example.todolistapp.TodoListApplication
+import com.example.todolistapp.models.ErrorModel
+import com.example.todolistapp.models.UserResponse
+import com.example.todolistapp.repositories.AuthenticationRepositoryInterface
+import com.example.todolistapp.repositories.UserRepositoryInterface
+import com.example.todolistapp.utils.TokenManager // <--- PENTING: Import TokenManager
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import com.example.todolistapp.R
-import com.example.todolistapp.TodoListApplication
-import com.example.todolistapp.uiStates.AuthenticatonStatusUIState
 import kotlinx.coroutines.launch
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
-import com.auth0.android.jwt.JWT
-import com.example.todolistapp.enums.PagesEnum
-import com.example.todolistapp.models.ErrorModel
-import com.example.todolistapp.models.UserResponse
-import com.example.todolistapp.repositories.AuthenticationRepository
-import com.example.todolistapp.repositories.AuthenticationRepositoryInterface
-import com.example.todolistapp.repositories.UserRepository
-import com.example.todolistapp.repositories.UserRepositoryInterface
-import com.google.gson.Gson
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.io.IOException
 
+// Pastikan file AuthenticationStatusUIState.kt dan AuthenticationUIState.kt sudah ada
+// Jika belum, definisikan sealed interface di file terpisah atau di atas class ini
+import com.example.todolistapp.uiStates.AuthenticationStatusUIState
+import com.example.todolistapp.uiStates.AuthenticationUIState
+
 class AuthenticationViewModel(
     private val authenticationRepository: AuthenticationRepositoryInterface,
     private val userRepository: UserRepositoryInterface
 ) : ViewModel() {
-    var authenticationStatus: AuthenticatonStatusUIState by mutableStateOf(
-        AuthenticatonStatusUIState.Start)
+
+    // --- STATE ---
+    var authenticationStatus: AuthenticationStatusUIState by mutableStateOf(AuthenticationStatusUIState.Start)
         private set
 
     private val _authenticationUIState = MutableStateFlow(AuthenticationUIState())
+    val authenticationUIState: StateFlow<AuthenticationUIState> = _authenticationUIState.asStateFlow()
 
-    val authenticationUIState: StateFlow<AuthenticationUIState>
-        get() {
-            return _authenticationUIState.asStateFlow()
-        }
-
+    // --- INPUT VARIABLES ---
     var usernameInput by mutableStateOf("")
         private set
-
     var passwordInput by mutableStateOf("")
         private set
-
     var confirmPasswordInput by mutableStateOf("")
         private set
-
     var emailInput by mutableStateOf("")
         private set
 
-    fun changeEmailInput(emailInput: String) {
-        this.emailInput = emailInput
-    }
+    // --- INPUT HANDLERS ---
+    fun changeEmailInput(input: String) { emailInput = input }
+    fun changeUsernameInput(input: String) { usernameInput = input }
+    fun changePasswordInput(input: String) { passwordInput = input }
+    fun changeConfirmPasswordInput(input: String) { confirmPasswordInput = input }
 
-    fun changeConfirmPasswordInput(confirmPasswordInput: String) {
-        this.confirmPasswordInput = confirmPasswordInput
-    }
-
-    fun changeUsernameInput(usernameInput: String) {
-        this.usernameInput = usernameInput
-    }
-
-    fun changePasswordInput(passwordInput: String) {
-        this.passwordInput = passwordInput
-    }
-
+    // --- VISIBILITY & FORM CHECKERS ---
     fun changePasswordVisibility() {
         _authenticationUIState.update { currentState ->
             if (currentState.showPassword) {
-                currentState.copy(
-                    showPassword = false,
-                    passwordVisibility = PasswordVisualTransformation(),
-                    passwordVisibilityIcon = R.drawable.ic_password_visible
-                )
+                currentState.copy(showPassword = false, passwordVisibility = PasswordVisualTransformation(), passwordVisibilityIcon = R.drawable.ic_password_visible)
             } else {
-                currentState.copy(
-                    showPassword = true,
-                    passwordVisibility = VisualTransformation.None,
-                    passwordVisibilityIcon = R.drawable.ic_password_invisible
-                )
+                currentState.copy(showPassword = true, passwordVisibility = VisualTransformation.None, passwordVisibilityIcon = R.drawable.ic_password_invisible)
             }
         }
     }
@@ -104,59 +78,31 @@ class AuthenticationViewModel(
     fun changeConfirmPasswordVisibility() {
         _authenticationUIState.update { currentState ->
             if (currentState.showConfirmPassword) {
-                currentState.copy(
-                    showConfirmPassword = false,
-                    confirmPasswordVisibility = PasswordVisualTransformation(),
-                    confirmPasswordVisibilityIcon = R.drawable.ic_password_visible
-                )
+                currentState.copy(showConfirmPassword = false, confirmPasswordVisibility = PasswordVisualTransformation(), confirmPasswordVisibilityIcon = R.drawable.ic_password_visible)
             } else {
-                currentState.copy(
-                    showConfirmPassword = true,
-                    confirmPasswordVisibility = VisualTransformation.None,
-                    confirmPasswordVisibilityIcon = R.drawable.ic_password_invisible
-                )
+                currentState.copy(showConfirmPassword = true, confirmPasswordVisibility = VisualTransformation.None, confirmPasswordVisibilityIcon = R.drawable.ic_password_invisible)
             }
         }
     }
 
     fun checkLoginForm() {
         if (emailInput.isNotEmpty() && passwordInput.isNotEmpty()) {
-            _authenticationUIState.update { currentState ->
-                currentState.copy(
-                    buttonEnabled = true
-                )
-            }
+            _authenticationUIState.update { it.copy(buttonEnabled = true) }
         } else {
-            _authenticationUIState.update { currentState ->
-                currentState.copy(
-                    buttonEnabled = false
-                )
-            }
+            _authenticationUIState.update { it.copy(buttonEnabled = false) }
         }
     }
 
     fun checkRegisterForm() {
         if (emailInput.isNotEmpty() && passwordInput.isNotEmpty() && usernameInput.isNotEmpty() && confirmPasswordInput.isNotEmpty() && passwordInput == confirmPasswordInput) {
-            _authenticationUIState.update { currentState ->
-                currentState.copy(
-                    buttonEnabled = true
-                )
-            }
+            _authenticationUIState.update { it.copy(buttonEnabled = true) }
         } else {
-            _authenticationUIState.update { currentState ->
-                currentState.copy(
-                    buttonEnabled = false
-                )
-            }
+            _authenticationUIState.update { it.copy(buttonEnabled = false) }
         }
     }
 
     fun checkButtonEnabled(isEnabled: Boolean): Color {
-        if (isEnabled) {
-            return Color.Blue
-        }
-
-        return Color.LightGray
+        return if (isEnabled) Color.Blue else Color.LightGray
     }
 
     fun resetViewModel() {
@@ -164,131 +110,146 @@ class AuthenticationViewModel(
         changePasswordInput("")
         changeUsernameInput("")
         changeConfirmPasswordInput("")
-        _authenticationUIState.update { currentState ->
-            currentState.copy(
-                showConfirmPassword = false,
-                showPassword = false,
-                passwordVisibility = PasswordVisualTransformation(),
-                confirmPasswordVisibility = PasswordVisualTransformation(),
-                passwordVisibilityIcon = R.drawable.ic_password_visible,
-                confirmPasswordVisibilityIcon = R.drawable.ic_password_visible,
+        _authenticationUIState.update {
+            it.copy(
+                showConfirmPassword = false, showPassword = false,
+                passwordVisibility = PasswordVisualTransformation(), confirmPasswordVisibility = PasswordVisualTransformation(),
                 buttonEnabled = false
             )
         }
+        authenticationStatus = AuthenticationStatusUIState.Start
     }
 
-    fun register(navController: NavHostController) {
+    // --- FUNGSI LOGIN ---
+    fun login() {
         viewModelScope.launch {
-            authenticationStatus = AuthenticatonStatusUIState.Loading
-
-            try {
-                val call = authenticationRepository.register(usernameInput, emailInput, passwordInput)
-
-                call.enqueue(object: Callback<UserResponse>{
-                    override fun onResponse(call: Call<UserResponse>, res: Response<UserResponse>) {
-                        if (res.isSuccessful) {
-                            val token = res.body()!!.data.token
-
-                            val jwt = JWT(token!!)
-
-                            val username = jwt.getClaim("username").asString()
-
-                            saveUsernameToken(token, username!!)
-
-                            authenticationStatus = AuthenticatonStatusUIState.Success(res.body()!!.data)
-
-                            resetViewModel()
-
-                            navController.navigate(PagesEnum.Home.name) {
-                                popUpTo(PagesEnum.Login.name) {
-                                    inclusive = true
-                                }
-                            }
-                        } else {
-                            val errorMessage = Gson().fromJson(
-                                res.errorBody()!!.charStream(),
-                                ErrorModel::class.java
-                            )
-
-                            authenticationStatus = AuthenticatonStatusUIState.Failed(errorMessage.errors)
-                        }
-                    }
-
-                    override fun onFailure(call: Call<UserResponse>, t: Throwable) {
-                        authenticationStatus = AuthenticatonStatusUIState.Failed(t.localizedMessage)
-                    }
-                })
-            } catch (error: IOException) {
-                authenticationStatus = AuthenticatonStatusUIState.Failed(error.localizedMessage)
-            }
-        }
-    }
-
-    fun login(navController: NavHostController) {
-        viewModelScope.launch {
-            authenticationStatus = AuthenticatonStatusUIState.Loading
+            authenticationStatus = AuthenticationStatusUIState.Loading
 
             try {
                 val call = authenticationRepository.login(emailInput, passwordInput)
 
-                call.enqueue(object: Callback<UserResponse>{
+                call.enqueue(object : Callback<UserResponse> {
                     override fun onResponse(call: Call<UserResponse>, res: Response<UserResponse>) {
                         if (res.isSuccessful) {
-                            val token = res.body()!!.data.token
+                            val data = res.body()?.data
+                            val token = data?.token
 
-                            val jwt = JWT(token!!)
+                            if (token != null && data != null) {
 
-                            val username = jwt.getClaim("username").asString()
+                                val jwt = JWT(token)
+                                val username = jwt.getClaim("username").asString() ?: "User"
 
-                            saveUsernameToken(token, username!!)
+                                TokenManager.saveToken(token)
 
-                            authenticationStatus = AuthenticatonStatusUIState.Success(res.body()!!.data)
+                                saveUsernameToken(token, username)
 
-                            resetViewModel()
-
-                            navController.navigate(PagesEnum.Home.name) {
-                                popUpTo(PagesEnum.Login.name) {
-                                    inclusive = true
-                                }
+                                authenticationStatus = AuthenticationStatusUIState.Success(data)
+                            } else {
+                                authenticationStatus = AuthenticationStatusUIState.Failed("Token Kosong dari Server")
                             }
                         } else {
-                            val errorMessage = Gson().fromJson(
-                                res.errorBody()!!.charStream(),
-                                ErrorModel::class.java
-                            )
-
-                            authenticationStatus = AuthenticatonStatusUIState.Failed(errorMessage.errors)
+                            try {
+                                val errorBody = res.errorBody()?.string()
+                                val errorMessage = try {
+                                    Gson().fromJson(errorBody, ErrorModel::class.java).errors
+                                } catch (e: Exception) {
+                                    "Login Gagal: ${res.code()}"
+                                }
+                                authenticationStatus = AuthenticationStatusUIState.Failed(errorMessage)
+                            } catch (e: Exception) {
+                                authenticationStatus = AuthenticationStatusUIState.Failed("Login Gagal: ${res.code()}")
+                            }
                         }
                     }
 
                     override fun onFailure(call: Call<UserResponse>, t: Throwable) {
-                        authenticationStatus = AuthenticatonStatusUIState.Failed(t.localizedMessage)
+                        authenticationStatus = AuthenticationStatusUIState.Failed(t.localizedMessage ?: "Unknown Error")
                     }
                 })
             } catch (error: IOException) {
-                authenticationStatus = AuthenticatonStatusUIState.Failed(error.localizedMessage)
+                authenticationStatus = AuthenticationStatusUIState.Failed(error.localizedMessage ?: "Network Error")
             }
         }
     }
 
-    fun saveUsernameToken(token: String, username: String) {
+    // --- FUNGSI REGISTER ---
+    // Diperbarui agar konsisten: Tidak perlu parameter NavController
+    // Biarkan View yang menangani navigasi saat status == Success
+    fun register() {
         viewModelScope.launch {
+            authenticationStatus = AuthenticationStatusUIState.Loading
+            try {
+                val call = authenticationRepository.register(usernameInput, emailInput, passwordInput)
+                call.enqueue(object: Callback<UserResponse>{
+                    override fun onResponse(call: Call<UserResponse>, res: Response<UserResponse>) {
+                        if (res.isSuccessful) {
+                            val data = res.body()?.data
+                            val token = data?.token
+
+                            if (token != null && data != null) {
+                                val jwt = JWT(token)
+                                val username = jwt.getClaim("username").asString() ?: "User"
+
+                                // SIMPAN TOKEN (PENTING)
+                                TokenManager.saveToken(token)
+                                saveUsernameToken(token, username)
+
+                                // Update State -> View akan pindah ke Home
+                                authenticationStatus = AuthenticationStatusUIState.Success(data)
+
+                                // Reset form setelah sukses
+                                resetViewModel()
+                            }
+                        } else {
+                            try {
+                                val errorBody = res.errorBody()?.string()
+                                val errorMessage = try {
+                                    Gson().fromJson(errorBody, ErrorModel::class.java).errors
+                                } catch (e: Exception) {
+                                    "Register Gagal: ${res.code()}"
+                                }
+                                authenticationStatus = AuthenticationStatusUIState.Failed(errorMessage)
+                            } catch (e: Exception) {
+                                authenticationStatus = AuthenticationStatusUIState.Failed("Register Gagal")
+                            }
+                        }
+                    }
+                    override fun onFailure(call: Call<UserResponse>, t: Throwable) {
+                        authenticationStatus = AuthenticationStatusUIState.Failed(t.localizedMessage ?: "Unknown Error")
+                    }
+                })
+            } catch (error: IOException) {
+                authenticationStatus = AuthenticationStatusUIState.Failed(error.localizedMessage ?: "Network Error")
+            }
+        }
+    }
+
+    // --- HELPER FUNCTIONS ---
+    private fun saveUsernameToken(token: String, username: String) {
+        viewModelScope.launch {
+            // Kita simpan juga di UserRepo (DataStore) sebagai cadangan/persistence
             userRepository.saveUserToken(token)
             userRepository.saveUsername(username)
         }
     }
 
-    fun clearErrorMessage() {
-        authenticationStatus = AuthenticatonStatusUIState.Start
+    fun resetStatus() {
+        authenticationStatus = AuthenticationStatusUIState.Start
     }
 
+    fun clearErrorMessage() {
+        authenticationStatus = AuthenticationStatusUIState.Start
+    }
+
+    // --- FACTORY (Dependency Injection) ---
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = (this[APPLICATION_KEY] as TodoListApplication)
-                val authenticationRepository = application.container.authenticationRepository
-                val userRepository = application.container.userRepository
-                AuthenticationViewModel(authenticationRepository, userRepository)
+                AuthenticationViewModel(
+                    authenticationRepository = application.container.authenticationRepository,
+                    userRepository = application.container.userRepository
+                )
             }
         }
     }

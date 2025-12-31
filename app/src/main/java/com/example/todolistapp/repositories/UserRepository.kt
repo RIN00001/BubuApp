@@ -13,6 +13,8 @@ interface UserRepositoryInterface {
 
     suspend fun saveUserToken(token: String)
     suspend fun saveUsername(username: String)
+
+    suspend fun logout()
 }
 
 class UserRepository (
@@ -27,6 +29,12 @@ class UserRepository (
 
     override suspend fun saveUsername(username: String) {
         userDataStore.edit { preferences -> preferences[USERNAME] = username }
+    }
+
+    override suspend fun logout() {
+        userDataStore.edit { preferences ->
+            preferences.clear()
+        }
     }
 
     private companion object {
