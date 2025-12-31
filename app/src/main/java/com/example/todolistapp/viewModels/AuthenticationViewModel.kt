@@ -1,11 +1,15 @@
 package com.example.todolistapp.viewModels
 
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.currentComposer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.datastore.dataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
@@ -15,9 +19,17 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.auth0.android.jwt.JWT
 import com.example.todolistapp.R
 import com.example.todolistapp.TodoListApplication
+import com.example.todolistapp.uiStates.AuthenticatonStatusUIState
+import kotlinx.coroutines.launch
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import com.auth0.android.jwt.JWT
+import com.example.todolistapp.BubuApplication
+import com.example.todolistapp.enums.PagesEnum
 import com.example.todolistapp.models.ErrorModel
 import com.example.todolistapp.models.UserResponse
+import com.example.todolistapp.repositories.AuthenticationRepository
 import com.example.todolistapp.repositories.AuthenticationRepositoryInterface
+import com.example.todolistapp.repositories.UserRepository
 import com.example.todolistapp.repositories.UserRepositoryInterface
 import com.example.todolistapp.utils.TokenManager // <--- PENTING: Import TokenManager
 import com.google.gson.Gson
@@ -51,10 +63,13 @@ class AuthenticationViewModel(
     // --- INPUT VARIABLES ---
     var usernameInput by mutableStateOf("")
         private set
+
     var passwordInput by mutableStateOf("")
         private set
+
     var confirmPasswordInput by mutableStateOf("")
         private set
+
     var emailInput by mutableStateOf("")
         private set
 
@@ -96,6 +111,12 @@ class AuthenticationViewModel(
     fun checkRegisterForm() {
         if (emailInput.isNotEmpty() && passwordInput.isNotEmpty() && usernameInput.isNotEmpty() && confirmPasswordInput.isNotEmpty() && passwordInput == confirmPasswordInput) {
             _authenticationUIState.update { it.copy(buttonEnabled = true) }
+        if (emailInput.isNotEmpty() && passwordInput.isNotEmpty() && usernameInput.isNotEmpty()) {
+            _authenticationUIState.update { currentState ->
+                currentState.copy(
+                    buttonEnabled = true
+                )
+            }
         } else {
             _authenticationUIState.update { it.copy(buttonEnabled = false) }
         }
@@ -199,6 +220,14 @@ class AuthenticationViewModel(
 
                                 // Reset form setelah sukses
                                 resetViewModel()
+                            authenticationStatus = AuthenticatonStatusUIState.Success(res.body()!!.data)
+
+                            resetViewModel()
+
+                            navController.navigate(PagesEnum.Books.name) {
+                                popUpTo(PagesEnum.Login.name) {
+                                    inclusive = true
+                                }
                             }
                         } else {
                             try {
@@ -250,6 +279,10 @@ class AuthenticationViewModel(
                     authenticationRepository = application.container.authenticationRepository,
                     userRepository = application.container.userRepository
                 )
+                val application = (this[APPLICATION_KEY] as BubuApplication)
+                val authenticationRepository = application.container.authenticationRepository
+                val userRepository = application.container.userRepository
+                AuthenticationViewModel(authenticationRepository, userRepository)
             }
         }
     }

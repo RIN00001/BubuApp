@@ -2,233 +2,293 @@ package com.example.todolistapp.views
 
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.example.todolistapp.R
-import com.example.todolistapp.enums.PagesEnum
-import com.example.todolistapp.uiStates.AuthenticationStatusUIState
+import androidx.navigation.compose.rememberNavController
+import com.example.todolistapp.ui.theme.TodoListAppTheme
+import com.example.todolistapp.uiStates.AuthenticatonStatusUIState
 import com.example.todolistapp.viewModels.AuthenticationViewModel
+import com.example.todolistapp.views.templates.AuthenticationButton
+import com.example.todolistapp.views.templates.AuthenticationQuestion
+import com.example.todolistapp.views.templates.AuthenticationOutlinedTextField
+import com.example.todolistapp.views.templates.PasswordOutlinedTextField
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterView(
     authenticationViewModel: AuthenticationViewModel,
+    modifier: Modifier = Modifier,
     navController: NavHostController,
     context: Context
 ) {
-    // 1. Ambil State UI dan Status
-    val uiState by authenticationViewModel.authenticationUIState.collectAsState()
-    val status = authenticationViewModel.authenticationStatus
+    val registerUIState by authenticationViewModel.authenticationUIState.collectAsState()
+    val focusManager = LocalFocusManager.current
 
-    // 2. LISTENER STATUS: Menangani Navigasi & Error Toast
-    LaunchedEffect(status) {
-        when (status) {
-            is AuthenticationStatusUIState.Success -> {
-                // Jika sukses, pindah ke Home & hapus history login/register
-                navController.navigate(PagesEnum.Home.name) {
-                    popUpTo(PagesEnum.Login.name) { inclusive = true }
-                }
-                authenticationViewModel.resetStatus()
-            }
-            is AuthenticationStatusUIState.Failed -> {
-                // Jika gagal, tampilkan Toast
-                Toast.makeText(context, status.errorMessage, Toast.LENGTH_LONG).show()
-                authenticationViewModel.clearErrorMessage()
-            }
-            else -> {}
+    LaunchedEffect(authenticationViewModel.authenticationStatus) {
+        val authenticationStatus = authenticationViewModel.authenticationStatus
+
+        if (authenticationStatus is AuthenticatonStatusUIState.Failed) {
+            Toast.makeText(context, authenticationStatus.errorMessage, Toast.LENGTH_SHORT).show()
+            authenticationViewModel.clearErrorMessage()
         }
     }
 
-    Scaffold { paddingValues ->
+    Box(
+        modifier = modifier.fillMaxSize()
+    ) {
+        // Purple curved header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
+                .background(
+                    color = Color(0xFF9B8FC7),
+                    shape = RoundedCornerShape(bottomStart = 50.dp, bottomEnd = 50.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Sign Up",
+                fontSize = 40.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+
+        // Form content
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .padding(top = 320.dp)
+                .padding(horizontal = 32.dp),
+            verticalArrangement = Arrangement.Top
         ) {
-            // --- HEADER ---
+            // Username field
             Text(
-                text = "Create Account",
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = Color.Black
+                text = "Username",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Sign up to get started",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // --- INPUT USERNAME ---
             OutlinedTextField(
                 value = authenticationViewModel.usernameInput,
                 onValueChange = {
                     authenticationViewModel.changeUsernameInput(it)
                     authenticationViewModel.checkRegisterForm()
                 },
-                label = { Text("Username") },
+                placeholder = { Text("Lacrimosa", color = Color.Gray) },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(28.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Black,
+                    focusedBorderColor = Color.Black,
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = {
+                        focusManager.moveFocus(FocusDirection.Down)
+                    }
+                ),
+                singleLine = true
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- INPUT EMAIL ---
+            // Email field
+            Text(
+                text = "Email",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             OutlinedTextField(
                 value = authenticationViewModel.emailInput,
                 onValueChange = {
                     authenticationViewModel.changeEmailInput(it)
                     authenticationViewModel.checkRegisterForm()
                 },
-                label = { Text("Email Address") },
+                placeholder = { Text("Lacrimosa@gmail.com", color = Color.Gray) },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
+                shape = RoundedCornerShape(28.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Black,
+                    focusedBorderColor = Color.Black,
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White
+                ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next
                 ),
-                shape = RoundedCornerShape(12.dp)
+                keyboardActions = KeyboardActions(
+                    onNext = {
+                        focusManager.moveFocus(FocusDirection.Down)
+                    }
+                ),
+                singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.padding(5.dp))
 
-            // --- INPUT PASSWORD ---
+            // Password field
+            Text(
+                text = "Password",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             OutlinedTextField(
                 value = authenticationViewModel.passwordInput,
                 onValueChange = {
                     authenticationViewModel.changePasswordInput(it)
                     authenticationViewModel.checkRegisterForm()
                 },
-                label = { Text("Password") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Next
-                ),
-                visualTransformation = uiState.passwordVisibility,
+                placeholder = { Text("***********", color = Color.Gray) },
+                visualTransformation = registerUIState.passwordVisibility,
                 trailingIcon = {
                     IconButton(onClick = { authenticationViewModel.changePasswordVisibility() }) {
-                        Image(
-                            painter = painterResource(id = uiState.passwordVisibilityIcon),
-                            contentDescription = "Toggle Password",
-                            modifier = Modifier.size(24.dp)
+                        Icon(
+                            painter = painterResource(id = registerUIState.passwordVisibilityIcon),
+                            contentDescription = "Toggle password visibility"
                         )
                     }
                 },
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --- INPUT CONFIRM PASSWORD ---
-            OutlinedTextField(
-                value = authenticationViewModel.confirmPasswordInput,
-                onValueChange = {
-                    authenticationViewModel.changeConfirmPasswordInput(it)
-                    authenticationViewModel.checkRegisterForm()
-                },
-                label = { Text("Confirm Password") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
+                shape = RoundedCornerShape(28.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Black,
+                    focusedBorderColor = Color.Black,
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White
+                ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
                 ),
-                visualTransformation = uiState.confirmPasswordVisibility,
-                trailingIcon = {
-                    IconButton(onClick = { authenticationViewModel.changeConfirmPasswordVisibility() }) {
-                        Image(
-                            painter = painterResource(id = uiState.confirmPasswordVisibilityIcon),
-                            contentDescription = "Toggle Confirm Password",
-                            modifier = Modifier.size(24.dp)
-                        )
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        if (registerUIState.buttonEnabled) {
+                            authenticationViewModel.register(navController)
+                        }
                     }
-                },
-                shape = RoundedCornerShape(12.dp)
+                ),
+                singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // --- BUTTON REGISTER ---
-            if (status is AuthenticationStatusUIState.Loading) {
-                CircularProgressIndicator()
-            } else {
-                Button(
-                    onClick = {
-                        // FIX: Panggil register() TANPA parameter NavController
-                        authenticationViewModel.register()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    enabled = uiState.buttonEnabled,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = authenticationViewModel.checkButtonEnabled(uiState.buttonEnabled)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(text = "Sign Up", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
+            // Continue button
+            Button(
+                onClick = {
+                    authenticationViewModel.register(navController)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF9B8FC7),
+                    disabledContainerColor = Color(0xFF9B8FC7).copy(alpha = 0.5f)
+                ),
+                enabled = registerUIState.buttonEnabled
+            ) {
+                Text(
+                    text = "Continue",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- LINK KE LOGIN ---
-            TextButton(
+            // "Atau" text
+            Text(
+                text = "Atau",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Normal,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Guest login button
+            OutlinedButton(
                 onClick = {
-                    navController.navigate(PagesEnum.Login.name) {
-                        popUpTo(PagesEnum.Login.name) { inclusive = true }
-                    }
-                }
+                    // TODO: Implement guest login
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = Color(0xFF9B8FC7),
+                    contentColor = Color.White
+                )
             ) {
                 Text(
-                    text = "Already have an account? Login",
-                    color = Color.Gray
+                    text = "Login sebagai tamu",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
+    }
+}
+
+@Preview(
+    showSystemUi = true,
+    showBackground = true
+)
+@Composable
+fun RegisterViewPreview() {
+    TodoListAppTheme {
+        RegisterView(
+            modifier = Modifier.fillMaxSize(),
+            authenticationViewModel = viewModel(),
+            navController = rememberNavController(),
+            context = LocalContext.current
+        )
     }
 }
