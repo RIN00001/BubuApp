@@ -8,7 +8,9 @@ data class BookModel(
     val createdAt: String? = null,
     val updatedAt: String? = null,
     val wallets: List<WalletModel>? = null,
-    val items: List<ItemModel>? = null
+    val items: List<ItemModel>? = null,
+    val totalIncome: Double? = null,
+    val totalExpense: Double? = null
 )
 
 data class BookCreateRequest(

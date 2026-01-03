@@ -21,6 +21,8 @@ fun _WalletAddForm(
         mutableStateOf(initialWallet?.balance?.toInt()?.toString() ?: "")
     }
 
+    val isEditMode = initialWallet != null
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -28,7 +30,7 @@ fun _WalletAddForm(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = if (initialWallet != null) "Edit Wallet Information" else "New Wallet Information",
+            text = if (isEditMode) "Edit Wallet Information" else "New Wallet Information",
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold
         )
@@ -41,19 +43,27 @@ fun _WalletAddForm(
             shape = RoundedCornerShape(12.dp)
         )
 
-        OutlinedTextField(
-            value = balanceText,
-            onValueChange = { balanceText = it },
-            label = { Text("Balance") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        )
+        if (!isEditMode) {
+            OutlinedTextField(
+                value = balanceText,
+                onValueChange = { balanceText = it },
+                label = { Text("Balance") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = {
-                val balance = balanceText.toDoubleOrNull() ?: 0.0
+                // For edit mode, keep the original balance
+                val balance = if (isEditMode) {
+                    initialWallet?.balance ?: 0.0
+                } else {
+                    balanceText.toDoubleOrNull() ?: 0.0
+                }
+
                 if (name.isNotBlank()) {
                     onSubmit(name, balance)
                 }
@@ -65,7 +75,7 @@ fun _WalletAddForm(
             shape = RoundedCornerShape(12.dp)
         ) {
             Text(
-                if (initialWallet != null) "Update Wallet" else "Create Wallet",
+                if (isEditMode) "Update Wallet" else "Create Wallet",
                 modifier = Modifier.padding(vertical = 8.dp)
             )
         }

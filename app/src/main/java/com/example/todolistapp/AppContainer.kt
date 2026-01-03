@@ -33,7 +33,7 @@ class AppContainer (
     private val dataStore: DataStore<Preferences>
 ) : AppContainerInterface {
 
-    private val backendURL = "http://192.168.1.4:3000/"
+    private val backendURL = "http://192.168.0.30:3000/"
 
     // FIRST: USER REPO (required for TokenInterceptor)
     private val _userRepository: UserRepositoryInterface by lazy {
