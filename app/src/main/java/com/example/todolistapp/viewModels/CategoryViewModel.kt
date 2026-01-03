@@ -12,7 +12,7 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.todolistapp.TodoListApplication
+import com.example.todolistapp.BubuApplication // Fix Import
 import com.example.todolistapp.models.CategoryModel
 import com.example.todolistapp.repositories.CategoryRepositoryInterface
 import kotlinx.coroutines.launch
@@ -23,10 +23,14 @@ class CategoryViewModel(
 
     // --- State UI ---
     var categories by mutableStateOf<List<CategoryModel>>(emptyList())
+        private set // Supaya hanya bisa diubah di dalam ViewModel
+
     var isLoading by mutableStateOf(false)
+        private set
 
     // Tab Aktif (Default: EXPENSE)
     var currentTab by mutableStateOf("EXPENSE")
+        private set
 
     init {
         loadCategories()
@@ -38,22 +42,18 @@ class CategoryViewModel(
         loadCategories()
     }
 
-    // 2. Load Data (Read) dengan EXTRA SAFETY
+    // 2. Load Data
     fun loadCategories() {
         isLoading = true
         viewModelScope.launch {
             try {
-                // Panggil repository (biasanya kirim param type ke backend)
+                // Request ke API dengan filter TYPE (INCOME/EXPENSE)
                 val response = categoryRepository.getAllCategories(currentTab)
 
                 if (response.isSuccessful) {
                     val allData = response.body()?.data ?: emptyList()
-
-                    // --- SAFETY FILTER ---
-                    // Kita filter lagi di sini untuk memastikan data yang muncul
-                    // BENAR-BENAR sesuai dengan Tab yang aktif.
+                    // Filter sisi client untuk keamanan ganda
                     categories = allData.filter { it.type == currentTab }
-
                 } else {
                     Log.e("CAT_VM", "Gagal load: ${response.code()}")
                 }
@@ -75,12 +75,12 @@ class CategoryViewModel(
         viewModelScope.launch {
             isLoading = true
             try {
-                // Otomatis pakai currentTab (INCOME/EXPENSE) saat buat baru
+                // Buat kategori sesuai Tab yang sedang aktif
                 val response = categoryRepository.createCategory(name, currentTab, icon)
 
                 if (response.isSuccessful) {
-                    Toast.makeText(context, "Berhasil dibuat!", Toast.LENGTH_SHORT).show()
-                    loadCategories() // Refresh list agar data baru muncul
+                    Toast.makeText(context, "Kategori berhasil dibuat!", Toast.LENGTH_SHORT).show()
+                    loadCategories() // Refresh list
                 } else {
                     val msg = response.errorBody()?.string() ?: "Gagal membuat kategori"
                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
@@ -138,11 +138,12 @@ class CategoryViewModel(
         }
     }
 
-    // Factory Injection
+    // --- FACTORY ---
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                val app = (this[APPLICATION_KEY] as TodoListApplication)
+                // FIX: Gunakan BubuApplication
+                val app = (this[APPLICATION_KEY] as BubuApplication)
                 CategoryViewModel(
                     categoryRepository = app.container.categoryRepository
                 )

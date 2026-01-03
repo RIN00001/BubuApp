@@ -5,21 +5,18 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
-import com.example.todolistapp.utils.TokenManager // Pastikan import ini
+import com.example.todolistapp.utils.TokenManager
 
+// INI DEFINISI UTAMA DATASTORE (Jangan pakai private)
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_data")
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "user_data"
-)
+class BubuApplication : Application() {
 
-class BubuApplication: Application() {
     lateinit var container: AppContainer
 
     override fun onCreate() {
         super.onCreate()
-
         TokenManager.init(this)
-
-        container = AppContainer(dataStore)
+        container = AppContainer(context = this)
     }
 }

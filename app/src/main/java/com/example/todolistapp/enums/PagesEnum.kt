@@ -20,5 +20,11 @@ enum class PagesEnum {
     // WALLET FLOWS (DETAIL / CRUD)
     WalletDetail,
     WalletCreate,
-    WalletEdit
+    WalletEdit,
+
+    // --- TAMBAHAN FITUR KAMU (ITEM & CATEGORY) ---
+    CreateItem,
+    EditItem,       // (Opsional, buat jaga-jaga kalau nanti ada edit)
+    ManageCategory,
+    CreateCategory  // (Opsional)
 }

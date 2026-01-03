@@ -1,165 +1,93 @@
 package com.example.todolistapp
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import com.auth0.android.jwt.BuildConfig
+import android.content.Context
+import com.example.todolistapp.interceptor.TokenInterceptor
 import com.example.todolistapp.repositories.*
 import com.example.todolistapp.services.*
-import com.example.todolistapp.utils.TokenManager
-import com.example.todolistapp.interceptor.TokenInterceptor
-import com.example.todolistapp.repositories.AuthenticationRepository
-import com.example.todolistapp.repositories.AuthenticationRepositoryInterface
-import com.example.todolistapp.repositories.UserRepository
-import com.example.todolistapp.repositories.UserRepositoryInterface
-import com.example.todolistapp.repositories.BookRepository
-import com.example.todolistapp.repositories.BookRepositoryInterface
-import com.example.todolistapp.repositories.WalletRepository
-import com.example.todolistapp.repositories.WalletRepositoryInterface
-import com.example.todolistapp.services.AuthenticationAPIService
-import com.example.todolistapp.services.BookAPIService
-import com.example.todolistapp.services.WalletAPIService
-
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-interface AppContainerInterface {
-    val authenticationRepository: AuthenticationRepositoryInterface
-    val userRepository: UserRepositoryInterface
-    val itemRepository: ItemRepositoryInterface
-    // TAMBAHAN: Interface untuk Category Repo
-    val categoryRepository: CategoryRepositoryInterface
+// HAPUS DEFINISI DATASTORE DISINI.
+// Kita gunakan yang sudah ada di BubuApplication.kt
 
-    // NEW MODULES
-    val bookRepository: BookRepositoryInterface
-    val walletRepository: WalletRepositoryInterface
+interface AppContainerInterface {
+    val authenticationRepository: AuthenticationRepository
+    val userRepository: UserRepository
+    val itemRepository: ItemRepository
+    val categoryRepository: CategoryRepository
+
+    // Tambahan Wajib (agar tidak error di ViewModel)
+    val bookRepository: BookRepository
+    val walletRepository: WalletRepository
 }
 
-class AppContainer (
-    private val dataStore: DataStore<Preferences>
-) : AppContainerInterface {
+class AppContainer(private val context: Context) : AppContainerInterface {
 
-    private val backendURL = "http://192.168.1.4:3000/"
+    // 1. Base URL (Pastikan IP benar, 10.0.2.2 untuk Emulator Android Studio)
+    private val backendURL = "http://10.0.2.2:3000/"
 
-    // FIRST: USER REPO (required for TokenInterceptor)
-    private val _userRepository: UserRepositoryInterface by lazy {
-        UserRepository(dataStore)
+    // 2. User Repository
+    // context.dataStore otomatis mengambil dari definisi di BubuApplication.kt
+    override val userRepository: UserRepository by lazy {
+        UserRepository(context.dataStore)
     }
 
-    // RETROFIT SERVICES -----------------------------------------------------
+    // 3. Interceptor
+    private val tokenInterceptor = TokenInterceptor(userRepository)
 
+    // 4. Client & Retrofit
+    private val client: OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        })
+        .addInterceptor(tokenInterceptor)
+        .build()
+
+    private val retrofit: Retrofit = Retrofit.Builder()
+        .baseUrl(backendURL)
+        .addConverterFactory(GsonConverterFactory.create())
+        .client(client)
+        .build()
+
+    // 5. Services (API Service)
     private val authenticationService: AuthenticationAPIService by lazy {
-        val retrofit = initRetrofit(_userRepository)
         retrofit.create(AuthenticationAPIService::class.java)
     }
-
-    private val bookService: BookAPIService by lazy {
-        val retrofit = initRetrofit(_userRepository)
+    private val itemAPIService: ItemAPIService by lazy {
+        retrofit.create(ItemAPIService::class.java)
+    }
+    private val categoryAPIService: CategoryAPIService by lazy {
+        retrofit.create(CategoryAPIService::class.java)
+    }
+    // Tambahkan Service Book & Wallet
+    private val bookAPIService: BookAPIService by lazy {
         retrofit.create(BookAPIService::class.java)
     }
-
-    private val walletService: WalletAPIService by lazy {
-        val retrofit = initRetrofit(_userRepository)
+    private val walletAPIService: WalletAPIService by lazy {
         retrofit.create(WalletAPIService::class.java)
     }
 
-    private val backendURL = "http://10.0.2.2:3000/"
-    // REPOSITORIES ----------------------------------------------------------
-
-    override val authenticationRepository: AuthenticationRepositoryInterface by lazy {
+    // 6. Repositories (Penghubung Data ke ViewModel)
+    override val authenticationRepository: AuthenticationRepository by lazy {
         AuthenticationRepository(authenticationService)
     }
 
-    // --- RETROFIT SERVICES ---
-    private fun initRetrofit(): Retrofit {
-        val logging = HttpLoggingInterceptor()
-        if (BuildConfig.DEBUG) {
-            logging.level = HttpLoggingInterceptor.Level.BODY
-        } else {
-            logging.level = HttpLoggingInterceptor.Level.NONE
-        }
-
-        // Interceptor Token (Otomatis ambil dari TokenManager)
-        val authInterceptor = okhttp3.Interceptor { chain ->
-            val requestBuilder = chain.request().newBuilder()
-            val token = TokenManager.getToken()
-            if (!token.isNullOrEmpty()) {
-                requestBuilder.addHeader("Authorization", "Bearer $token")
-            }
-            chain.proceed(requestBuilder.build())
-        }
-    override val userRepository: UserRepositoryInterface
-        get() = _userRepository
-
-    override val bookRepository: BookRepositoryInterface by lazy {
-        BookRepository(bookService)
-    }
-
-    override val walletRepository: WalletRepositoryInterface by lazy {
-        WalletRepository(walletService)
-    }
-
-    // RETROFIT INITIALIZATION ----------------------------------------------
-
-    private fun initRetrofit(userRepo: UserRepositoryInterface): Retrofit {
-
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        }
-
-        val client = OkHttpClient.Builder()
-            .addInterceptor(logging)
-            .addInterceptor(authInterceptor)
-            .build()
-
-        return Retrofit.Builder()
-            .addConverterFactory(GsonConverterFactory.create())
-            .client(client)
-            .baseUrl(backendURL)
-            .build()
-    }
-
-    // Lazy instance retrofit (biar gak init berkali-kali)
-    private val retrofitClient by lazy { initRetrofit() }
-
-    private val authenticationAPIService: AuthenticationAPIService by lazy {
-        retrofitClient.create(AuthenticationAPIService::class.java)
-    }
-
-    private val itemAPIService: ItemAPIService by lazy {
-        retrofitClient.create(ItemAPIService::class.java)
-    }
-
-    // TAMBAHAN: Service Category
-    private val categoryAPIService: CategoryAPIService by lazy {
-        retrofitClient.create(CategoryAPIService::class.java)
-    }
-
-    // --- REPOSITORIES ---
-    override val authenticationRepository: AuthenticationRepositoryInterface by lazy {
-        AuthenticationRepository(authenticationAPIService)
-    }
-
-    override val userRepository: UserRepositoryInterface by lazy {
-        UserRepository(dataStore)
-    }
-            .addInterceptor(logging)
-            .addInterceptor(TokenInterceptor(userRepo)) // Injects "Bearer token"
-            .build()
-
-        return Retrofit.Builder()
-            .baseUrl(backendURL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .client(client)
-            .build()
-    override val itemRepository: ItemRepositoryInterface by lazy {
+    override val itemRepository: ItemRepository by lazy {
         ItemRepository(itemAPIService)
     }
 
-    // TAMBAHAN: Repo Category
-    override val categoryRepository: CategoryRepositoryInterface by lazy {
+    override val categoryRepository: CategoryRepository by lazy {
         CategoryRepository(categoryAPIService)
     }
-}
+
+    // Tambahkan Repository Book & Wallet
+    override val bookRepository: BookRepository by lazy {
+        BookRepository(bookAPIService)
     }
+
+    override val walletRepository: WalletRepository by lazy {
+        WalletRepository(walletAPIService)
+    }
+}

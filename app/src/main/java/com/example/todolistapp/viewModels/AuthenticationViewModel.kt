@@ -1,37 +1,25 @@
 package com.example.todolistapp.viewModels
 
-import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.runtime.currentComposer
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.datastore.dataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.auth0.android.jwt.JWT
-import com.example.todolistapp.R
-import com.example.todolistapp.TodoListApplication
-import com.example.todolistapp.uiStates.AuthenticatonStatusUIState
-import kotlinx.coroutines.launch
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
-import com.auth0.android.jwt.JWT
 import com.example.todolistapp.BubuApplication
-import com.example.todolistapp.enums.PagesEnum
+import com.example.todolistapp.R
 import com.example.todolistapp.models.ErrorModel
 import com.example.todolistapp.models.UserResponse
-import com.example.todolistapp.repositories.AuthenticationRepository
 import com.example.todolistapp.repositories.AuthenticationRepositoryInterface
-import com.example.todolistapp.repositories.UserRepository
 import com.example.todolistapp.repositories.UserRepositoryInterface
-import com.example.todolistapp.utils.TokenManager // <--- PENTING: Import TokenManager
+import com.example.todolistapp.uiStates.AuthenticationStatusUIState
+import com.example.todolistapp.uiStates.AuthenticationUIState
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,12 +29,6 @@ import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import java.io.IOException
-
-// Pastikan file AuthenticationStatusUIState.kt dan AuthenticationUIState.kt sudah ada
-// Jika belum, definisikan sealed interface di file terpisah atau di atas class ini
-import com.example.todolistapp.uiStates.AuthenticationStatusUIState
-import com.example.todolistapp.uiStates.AuthenticationUIState
 
 class AuthenticationViewModel(
     private val authenticationRepository: AuthenticationRepositoryInterface,
@@ -63,29 +45,69 @@ class AuthenticationViewModel(
     // --- INPUT VARIABLES ---
     var usernameInput by mutableStateOf("")
         private set
-
+    var emailInput by mutableStateOf("")
+        private set
     var passwordInput by mutableStateOf("")
         private set
 
     var confirmPasswordInput by mutableStateOf("")
         private set
 
-    var emailInput by mutableStateOf("")
-        private set
+    // ==========================================================
+    // --- INPUT HANDLERS (DIPISAH AGAR TIDAK KONFLIK) ---
+    // ==========================================================
 
-    // --- INPUT HANDLERS ---
-    fun changeEmailInput(input: String) { emailInput = input }
-    fun changeUsernameInput(input: String) { usernameInput = input }
-    fun changePasswordInput(input: String) { passwordInput = input }
-    fun changeConfirmPasswordInput(input: String) { confirmPasswordInput = input }
+    // 1. KHUSUS UNTUK HALAMAN REGISTER (SIGN UP)
+    fun changeUsernameInput(input: String) {
+        usernameInput = input
+        checkRegisterForm()
+    }
 
-    // --- VISIBILITY & FORM CHECKERS ---
+    // Dipakai oleh Register View
+    fun changeEmailInput(input: String) {
+        emailInput = input
+        checkRegisterForm()
+    }
+
+    // Dipakai oleh Register View
+    fun changePasswordInput(input: String) {
+        passwordInput = input
+        checkRegisterForm()
+    }
+
+    fun changeConfirmPasswordInput(input: String) {
+        confirmPasswordInput = input
+        checkRegisterForm()
+    }
+
+    // 2. KHUSUS UNTUK HALAMAN LOGIN (BARU)
+    fun changeLoginEmail(input: String) {
+        emailInput = input
+        checkLoginForm() // Hanya cek aturan login
+    }
+
+    fun changeLoginPassword(input: String) {
+        passwordInput = input
+        checkLoginForm() // Hanya cek aturan login
+    }
+
+    // ==========================================================
+
+    // --- UI LOGIC ---
     fun changePasswordVisibility() {
         _authenticationUIState.update { currentState ->
             if (currentState.showPassword) {
-                currentState.copy(showPassword = false, passwordVisibility = PasswordVisualTransformation(), passwordVisibilityIcon = R.drawable.ic_password_visible)
+                currentState.copy(
+                    showPassword = false,
+                    passwordVisibility = PasswordVisualTransformation(),
+                    passwordVisibilityIcon = R.drawable.ic_password_visible
+                )
             } else {
-                currentState.copy(showPassword = true, passwordVisibility = VisualTransformation.None, passwordVisibilityIcon = R.drawable.ic_password_invisible)
+                currentState.copy(
+                    showPassword = true,
+                    passwordVisibility = VisualTransformation.None,
+                    passwordVisibilityIcon = R.drawable.ic_password_invisible
+                )
             }
         }
     }
@@ -93,196 +115,148 @@ class AuthenticationViewModel(
     fun changeConfirmPasswordVisibility() {
         _authenticationUIState.update { currentState ->
             if (currentState.showConfirmPassword) {
-                currentState.copy(showConfirmPassword = false, confirmPasswordVisibility = PasswordVisualTransformation(), confirmPasswordVisibilityIcon = R.drawable.ic_password_visible)
+                currentState.copy(
+                    showConfirmPassword = false,
+                    confirmPasswordVisibility = PasswordVisualTransformation(),
+                    confirmPasswordVisibilityIcon = R.drawable.ic_password_visible
+                )
             } else {
-                currentState.copy(showConfirmPassword = true, confirmPasswordVisibility = VisualTransformation.None, confirmPasswordVisibilityIcon = R.drawable.ic_password_invisible)
+                currentState.copy(
+                    showConfirmPassword = true,
+                    confirmPasswordVisibility = VisualTransformation.None,
+                    confirmPasswordVisibilityIcon = R.drawable.ic_password_invisible
+                )
             }
         }
     }
 
     fun checkLoginForm() {
-        if (emailInput.isNotEmpty() && passwordInput.isNotEmpty()) {
-            _authenticationUIState.update { it.copy(buttonEnabled = true) }
-        } else {
-            _authenticationUIState.update { it.copy(buttonEnabled = false) }
-        }
+        // Login cuma butuh Email & Password
+        val isValid = emailInput.isNotEmpty() && passwordInput.isNotEmpty()
+        _authenticationUIState.update { it.copy(buttonEnabled = isValid) }
     }
 
     fun checkRegisterForm() {
-        if (emailInput.isNotEmpty() && passwordInput.isNotEmpty() && usernameInput.isNotEmpty() && confirmPasswordInput.isNotEmpty() && passwordInput == confirmPasswordInput) {
-            _authenticationUIState.update { it.copy(buttonEnabled = true) }
-        if (emailInput.isNotEmpty() && passwordInput.isNotEmpty() && usernameInput.isNotEmpty()) {
-            _authenticationUIState.update { currentState ->
-                currentState.copy(
-                    buttonEnabled = true
-                )
-            }
-        } else {
-            _authenticationUIState.update { it.copy(buttonEnabled = false) }
-        }
+        // Register butuh Username, Email, Password
+        val isValid = emailInput.isNotEmpty() &&
+                passwordInput.isNotEmpty() &&
+                usernameInput.isNotEmpty()
+
+        _authenticationUIState.update { it.copy(buttonEnabled = isValid) }
     }
 
-    fun checkButtonEnabled(isEnabled: Boolean): Color {
-        return if (isEnabled) Color.Blue else Color.LightGray
-    }
-
+    // --- RESET ---
     fun resetViewModel() {
-        changeEmailInput("")
-        changePasswordInput("")
-        changeUsernameInput("")
-        changeConfirmPasswordInput("")
-        _authenticationUIState.update {
-            it.copy(
-                showConfirmPassword = false, showPassword = false,
-                passwordVisibility = PasswordVisualTransformation(), confirmPasswordVisibility = PasswordVisualTransformation(),
-                buttonEnabled = false
-            )
-        }
+        emailInput = ""
+        passwordInput = ""
+        usernameInput = ""
+        confirmPasswordInput = ""
         authenticationStatus = AuthenticationStatusUIState.Start
+        _authenticationUIState.update { AuthenticationUIState() }
     }
 
-    // --- FUNGSI LOGIN ---
+    fun clearErrorMessage() {
+        if (authenticationStatus is AuthenticationStatusUIState.Failed) {
+            authenticationStatus = AuthenticationStatusUIState.Start
+        }
+    }
+
+    // ==========================================
+    // --- API CALLS ---
+    // ==========================================
+
     fun login() {
-        viewModelScope.launch {
-            authenticationStatus = AuthenticationStatusUIState.Loading
+        authenticationStatus = AuthenticationStatusUIState.Loading
+        val call = authenticationRepository.login(emailInput, passwordInput)
 
-            try {
-                val call = authenticationRepository.login(emailInput, passwordInput)
+        call.enqueue(object : Callback<UserResponse> {
+            override fun onResponse(call: Call<UserResponse>, response: Response<UserResponse>) {
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    val data = body?.data
+                    val token = data?.token
 
-                call.enqueue(object : Callback<UserResponse> {
-                    override fun onResponse(call: Call<UserResponse>, res: Response<UserResponse>) {
-                        if (res.isSuccessful) {
-                            val data = res.body()?.data
-                            val token = data?.token
-
-                            if (token != null && data != null) {
-
-                                val jwt = JWT(token)
-                                val username = jwt.getClaim("username").asString() ?: "User"
-
-                                TokenManager.saveToken(token)
-
-                                saveUsernameToken(token, username)
-
-                                authenticationStatus = AuthenticationStatusUIState.Success(data)
-                            } else {
-                                authenticationStatus = AuthenticationStatusUIState.Failed("Token Kosong dari Server")
-                            }
-                        } else {
-                            try {
-                                val errorBody = res.errorBody()?.string()
-                                val errorMessage = try {
-                                    Gson().fromJson(errorBody, ErrorModel::class.java).errors
-                                } catch (e: Exception) {
-                                    "Login Gagal: ${res.code()}"
-                                }
-                                authenticationStatus = AuthenticationStatusUIState.Failed(errorMessage)
-                            } catch (e: Exception) {
-                                authenticationStatus = AuthenticationStatusUIState.Failed("Login Gagal: ${res.code()}")
-                            }
-                        }
+                    if (token != null && data != null) {
+                        saveUserSession(token, emailInput)
+                        authenticationStatus = AuthenticationStatusUIState.Success(data)
+                        Log.d("AuthViewModel", "Login Success: $token")
+                    } else {
+                        authenticationStatus = AuthenticationStatusUIState.Failed("Login berhasil tapi data/token kosong")
                     }
-
-                    override fun onFailure(call: Call<UserResponse>, t: Throwable) {
-                        authenticationStatus = AuthenticationStatusUIState.Failed(t.localizedMessage ?: "Unknown Error")
-                    }
-                })
-            } catch (error: IOException) {
-                authenticationStatus = AuthenticationStatusUIState.Failed(error.localizedMessage ?: "Network Error")
+                } else {
+                    val errorMsg = parseErrorMessage(response.errorBody()?.string())
+                    authenticationStatus = AuthenticationStatusUIState.Failed(errorMsg)
+                    Log.e("AuthViewModel", "Login Error: $errorMsg")
+                }
             }
-        }
+
+            override fun onFailure(call: Call<UserResponse>, t: Throwable) {
+                val msg = t.localizedMessage ?: "Network Error"
+                authenticationStatus = AuthenticationStatusUIState.Failed(msg)
+                Log.e("AuthViewModel", "Login Failure: $msg")
+            }
+        })
     }
 
-    // --- FUNGSI REGISTER ---
-    // Diperbarui agar konsisten: Tidak perlu parameter NavController
-    // Biarkan View yang menangani navigasi saat status == Success
     fun register() {
-        viewModelScope.launch {
-            authenticationStatus = AuthenticationStatusUIState.Loading
-            try {
-                val call = authenticationRepository.register(usernameInput, emailInput, passwordInput)
-                call.enqueue(object: Callback<UserResponse>{
-                    override fun onResponse(call: Call<UserResponse>, res: Response<UserResponse>) {
-                        if (res.isSuccessful) {
-                            val data = res.body()?.data
-                            val token = data?.token
+        authenticationStatus = AuthenticationStatusUIState.Loading
+        val call = authenticationRepository.register(usernameInput, emailInput, passwordInput)
 
-                            if (token != null && data != null) {
-                                val jwt = JWT(token)
-                                val username = jwt.getClaim("username").asString() ?: "User"
+        call.enqueue(object : Callback<UserResponse> {
+            override fun onResponse(call: Call<UserResponse>, response: Response<UserResponse>) {
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    val data = body?.data
 
-                                // SIMPAN TOKEN (PENTING)
-                                TokenManager.saveToken(token)
-                                saveUsernameToken(token, username)
-
-                                // Update State -> View akan pindah ke Home
-                                authenticationStatus = AuthenticationStatusUIState.Success(data)
-
-                                // Reset form setelah sukses
-                                resetViewModel()
-                            authenticationStatus = AuthenticatonStatusUIState.Success(res.body()!!.data)
-
-                            resetViewModel()
-
-                            navController.navigate(PagesEnum.Books.name) {
-                                popUpTo(PagesEnum.Login.name) {
-                                    inclusive = true
-                                }
-                            }
-                        } else {
-                            try {
-                                val errorBody = res.errorBody()?.string()
-                                val errorMessage = try {
-                                    Gson().fromJson(errorBody, ErrorModel::class.java).errors
-                                } catch (e: Exception) {
-                                    "Register Gagal: ${res.code()}"
-                                }
-                                authenticationStatus = AuthenticationStatusUIState.Failed(errorMessage)
-                            } catch (e: Exception) {
-                                authenticationStatus = AuthenticationStatusUIState.Failed("Register Gagal")
-                            }
-                        }
+                    if (data != null) {
+                        authenticationStatus = AuthenticationStatusUIState.Success(data)
+                        Log.d("AuthViewModel", "Register Success")
+                    } else {
+                        authenticationStatus = AuthenticationStatusUIState.Failed("Register berhasil tapi respon kosong")
                     }
-                    override fun onFailure(call: Call<UserResponse>, t: Throwable) {
-                        authenticationStatus = AuthenticationStatusUIState.Failed(t.localizedMessage ?: "Unknown Error")
-                    }
-                })
-            } catch (error: IOException) {
-                authenticationStatus = AuthenticationStatusUIState.Failed(error.localizedMessage ?: "Network Error")
+                } else {
+                    val errorMsg = parseErrorMessage(response.errorBody()?.string())
+                    authenticationStatus = AuthenticationStatusUIState.Failed(errorMsg)
+                    Log.e("AuthViewModel", "Register Error: $errorMsg")
+                }
             }
-        }
+
+            override fun onFailure(call: Call<UserResponse>, t: Throwable) {
+                val msg = t.localizedMessage ?: "Network Error"
+                authenticationStatus = AuthenticationStatusUIState.Failed(msg)
+                Log.e("AuthViewModel", "Register Failure: $msg")
+            }
+        })
     }
 
     // --- HELPER FUNCTIONS ---
-    private fun saveUsernameToken(token: String, username: String) {
+
+    private fun saveUserSession(token: String, username: String) {
         viewModelScope.launch {
-            // Kita simpan juga di UserRepo (DataStore) sebagai cadangan/persistence
             userRepository.saveUserToken(token)
             userRepository.saveUsername(username)
         }
     }
 
-    fun resetStatus() {
-        authenticationStatus = AuthenticationStatusUIState.Start
+    private fun parseErrorMessage(errorBody: String?): String {
+        return try {
+            if (errorBody == null) return "Unknown Error"
+            val errorResponse = Gson().fromJson(errorBody, ErrorModel::class.java)
+            errorResponse.errors ?: "Request Failed"
+        } catch (e: Exception) {
+            "Gagal memproses error server"
+        }
     }
 
-    fun clearErrorMessage() {
-        authenticationStatus = AuthenticationStatusUIState.Start
-    }
-
-    // --- FACTORY (Dependency Injection) ---
+    // --- FACTORY ---
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                val application = (this[APPLICATION_KEY] as TodoListApplication)
+                val application = (this[APPLICATION_KEY] as BubuApplication)
                 AuthenticationViewModel(
                     authenticationRepository = application.container.authenticationRepository,
                     userRepository = application.container.userRepository
                 )
-                val application = (this[APPLICATION_KEY] as BubuApplication)
-                val authenticationRepository = application.container.authenticationRepository
-                val userRepository = application.container.userRepository
-                AuthenticationViewModel(authenticationRepository, userRepository)
             }
         }
     }

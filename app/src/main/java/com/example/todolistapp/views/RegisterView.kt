@@ -3,28 +3,12 @@ package com.example.todolistapp.views
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -42,13 +26,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.example.todolistapp.enums.PagesEnum
 import com.example.todolistapp.ui.theme.TodoListAppTheme
-import com.example.todolistapp.uiStates.AuthenticatonStatusUIState
+import com.example.todolistapp.uiStates.AuthenticationStatusUIState
 import com.example.todolistapp.viewModels.AuthenticationViewModel
-import com.example.todolistapp.views.templates.AuthenticationButton
 import com.example.todolistapp.views.templates.AuthenticationQuestion
-import com.example.todolistapp.views.templates.AuthenticationOutlinedTextField
-import com.example.todolistapp.views.templates.PasswordOutlinedTextField
 
 @Composable
 fun RegisterView(
@@ -60,12 +42,24 @@ fun RegisterView(
     val registerUIState by authenticationViewModel.authenticationUIState.collectAsState()
     val focusManager = LocalFocusManager.current
 
-    LaunchedEffect(authenticationViewModel.authenticationStatus) {
-        val authenticationStatus = authenticationViewModel.authenticationStatus
+    // --- NAVIGASI ---
+    val status = authenticationViewModel.authenticationStatus
 
-        if (authenticationStatus is AuthenticatonStatusUIState.Failed) {
-            Toast.makeText(context, authenticationStatus.errorMessage, Toast.LENGTH_SHORT).show()
-            authenticationViewModel.clearErrorMessage()
+    LaunchedEffect(status) {
+        when (status) {
+            is AuthenticationStatusUIState.Failed -> {
+                Toast.makeText(context, status.errorMessage, Toast.LENGTH_SHORT).show()
+                authenticationViewModel.clearErrorMessage()
+            }
+            is AuthenticationStatusUIState.Success -> {
+                Toast.makeText(context, "Registrasi Berhasil! Silakan Login.", Toast.LENGTH_LONG).show()
+                // REGISTER SUKSES -> PINDAH KE HALAMAN LOGIN
+                navController.navigate(PagesEnum.Login.name) {
+                    popUpTo(PagesEnum.Register.name) { inclusive = true }
+                }
+                authenticationViewModel.resetViewModel()
+            }
+            else -> {}
         }
     }
 
@@ -110,7 +104,6 @@ fun RegisterView(
                 value = authenticationViewModel.usernameInput,
                 onValueChange = {
                     authenticationViewModel.changeUsernameInput(it)
-                    authenticationViewModel.checkRegisterForm()
                 },
                 placeholder = { Text("Lacrimosa", color = Color.Gray) },
                 modifier = Modifier.fillMaxWidth(),
@@ -146,7 +139,6 @@ fun RegisterView(
                 value = authenticationViewModel.emailInput,
                 onValueChange = {
                     authenticationViewModel.changeEmailInput(it)
-                    authenticationViewModel.checkRegisterForm()
                 },
                 placeholder = { Text("Lacrimosa@gmail.com", color = Color.Gray) },
                 modifier = Modifier.fillMaxWidth(),
@@ -182,7 +174,6 @@ fun RegisterView(
                 value = authenticationViewModel.passwordInput,
                 onValueChange = {
                     authenticationViewModel.changePasswordInput(it)
-                    authenticationViewModel.checkRegisterForm()
                 },
                 placeholder = { Text("***********", color = Color.Gray) },
                 visualTransformation = registerUIState.passwordVisibility,
@@ -209,7 +200,7 @@ fun RegisterView(
                 keyboardActions = KeyboardActions(
                     onDone = {
                         if (registerUIState.buttonEnabled) {
-                            authenticationViewModel.register(navController)
+                            authenticationViewModel.register() // HAPUS navController
                         }
                     }
                 ),
@@ -221,7 +212,7 @@ fun RegisterView(
             // Continue button
             Button(
                 onClick = {
-                    authenticationViewModel.register(navController)
+                    authenticationViewModel.register() // HAPUS navController
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -233,17 +224,20 @@ fun RegisterView(
                 ),
                 enabled = registerUIState.buttonEnabled
             ) {
-                Text(
-                    text = "Continue",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White
-                )
+                if (status is AuthenticationStatusUIState.Loading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text(
+                        text = "Continue",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                    )
+                }
             }
 
+            // ... Sisa kode "Atau" dan "Guest Login" tetap sama ...
             Spacer(modifier = Modifier.height(16.dp))
-
-            // "Atau" text
             Text(
                 text = "Atau",
                 fontSize = 16.sp,
@@ -253,11 +247,8 @@ fun RegisterView(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Guest login button
             OutlinedButton(
-                onClick = {
-                    // TODO: Implement guest login
-                },
+                onClick = { },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -274,21 +265,5 @@ fun RegisterView(
                 )
             }
         }
-    }
-}
-
-@Preview(
-    showSystemUi = true,
-    showBackground = true
-)
-@Composable
-fun RegisterViewPreview() {
-    TodoListAppTheme {
-        RegisterView(
-            modifier = Modifier.fillMaxSize(),
-            authenticationViewModel = viewModel(),
-            navController = rememberNavController(),
-            context = LocalContext.current
-        )
     }
 }

@@ -22,8 +22,6 @@ import retrofit2.Response
 import okio.IOException
 
 
-
-
 class BookViewModel(
     private val bookRepository: BookRepositoryInterface,
     private val userRepository: UserRepositoryInterface

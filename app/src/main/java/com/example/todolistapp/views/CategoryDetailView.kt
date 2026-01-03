@@ -19,7 +19,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavHostController
 import com.example.todolistapp.models.ItemModel
-import com.example.todolistapp.viewModels.HomeUIState
+// PERBAIKAN IMPORT: Ambil dari uiStates, bukan viewModels
+import com.example.todolistapp.uiStates.HomeUIState
 import com.example.todolistapp.viewModels.HomeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,7 +34,7 @@ fun CategoryDetailView(
     val uiState = viewModel.homeUIState
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Load data setiap kali halaman tampil
+    // Load data setiap kali halaman tampil (Refresh saat kembali dari halaman Add/Edit)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -58,8 +59,9 @@ fun CategoryDetailView(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
+                // Bersihkan state edit sebelum navigasi ke Create (Mode Tambah)
                 navController.currentBackStackEntry?.savedStateHandle?.remove<Int>("edit_id")
-                // Navigasi dengan parameter categoryId
+                // Navigasi dengan parameter categoryId agar otomatis terpilih
                 navController.navigate("create?categoryId=$categoryId")
             }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Item")
@@ -68,14 +70,18 @@ fun CategoryDetailView(
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             when (uiState) {
-                is HomeUIState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                is HomeUIState.Error -> Text("Error memuat data", modifier = Modifier.align(Alignment.Center))
+                is HomeUIState.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+                is HomeUIState.Error -> {
+                    Text("Error memuat data / Gagal koneksi", modifier = Modifier.align(Alignment.Center))
+                }
                 is HomeUIState.Success -> {
-                    // PERBAIKAN DISINI: Gunakan 'it.categoryId' (sesuai nama variabel di ItemModel)
+                    // Filter item sesuai categoryId yang sedang dibuka
                     val filteredItems = uiState.items.filter { it.categoryId == categoryId }
 
                     if (filteredItems.isEmpty()) {
-                        Text("Belum ada transaksi di sini.", modifier = Modifier.align(Alignment.Center))
+                        Text("Belum ada transaksi di kategori ini.", modifier = Modifier.align(Alignment.Center))
                     } else {
                         LazyColumn(
                             contentPadding = PaddingValues(16.dp),
@@ -86,11 +92,13 @@ fun CategoryDetailView(
                                     item = item,
                                     onDelete = { viewModel.deleteItem(item.id) },
                                     onEdit = {
+                                        // Simpan data ke SavedStateHandle untuk mode Edit
                                         navController.currentBackStackEntry?.savedStateHandle?.apply {
                                             set("edit_id", item.id)
                                             set("edit_name", item.name)
-                                            set("edit_amount", item.amount) // amount sudah Long, tidak perlu toLong() lagi sebenarnya
+                                            set("edit_amount", item.amount)
                                             set("edit_type", item.type)
+                                            set("edit_cat_id", item.categoryId) // Opsional: kirim cat id juga
                                         }
                                         navController.navigate("create?categoryId=$categoryId")
                                     }
@@ -118,12 +126,22 @@ fun TransactionItemCard(item: ItemModel, onDelete: () -> Unit, onEdit: () -> Uni
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.name, style = MaterialTheme.typography.titleMedium)
-                // item.amount di ItemModel kamu sudah Long, jadi langsung saja
-                Text("Rp ${item.amount}", style = MaterialTheme.typography.bodyMedium)
+
+                // Format amount biar lebih rapi (Misal warna merah expense, hijau income)
+                val color = if (item.type == "EXPENSE") Color.Red else Color(0xFF006400) // Dark Green
+                Text(
+                    text = "Rp ${item.amount}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = color
+                )
             }
             Row {
-                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "Edit", tint = Color.Blue) }
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "Delete", tint = Color.Red) }
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Default.Edit, "Edit", tint = MaterialTheme.colorScheme.primary)
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }
