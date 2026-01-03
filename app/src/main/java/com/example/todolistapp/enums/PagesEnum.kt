@@ -20,5 +20,11 @@ enum class PagesEnum {
     // WALLET FLOWS (DETAIL / CRUD)
     WalletDetail,
     WalletCreate,
-    WalletEdit
+    WalletEdit,
+
+    // Saving
+    CreateSaving,
+    EditSaving,
+    SavingDetail,
+    AddAmount
 }
