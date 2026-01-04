@@ -1,4 +1,4 @@
-package com.example.todolistapp.views.home
+package com.example.todolistapp.views.components.book
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer

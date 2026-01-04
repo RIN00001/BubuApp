@@ -10,12 +10,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -31,6 +31,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.todolistapp.models.BookModel
+import com.example.todolistapp.models.WalletModel
+import com.example.todolistapp.utils.formatRupiah
 
 @Composable
 fun BookSummaryCard(
@@ -38,6 +40,10 @@ fun BookSummaryCard(
     hideValues: Boolean,
     onToggleVisibility: () -> Unit
 ) {
+    // Calculate values from book data
+    val income = book.totalIncome ?: 0.0
+    val expense = book.totalExpense ?: 0.0
+    val balance = book.wallets?.sumOf { it.balance } ?: 0.0
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -102,21 +108,21 @@ fun BookSummaryCard(
             ) {
                 SummaryItem(
                     label = "Income",
-                    value = if (hideValues) "Rp*******" else "Rp 1,000,000",
+                    value = if (hideValues) "Rp****" else formatRupiah(income),
                     color = Color(0xFF4CAF50),
-                    icon = Icons.Default.TrendingUp
+                    icon = Icons.AutoMirrored.Filled.TrendingUp
                 )
                 SummaryItem(
                     label = "Balance",
-                    value = if (hideValues) "Rp*******" else "Rp 970,000",
+                    value = if (hideValues) "Rp****" else formatRupiah(balance),
                     color = Color(0xFF000000),
                     icon = Icons.Default.AccountBalance
                 )
                 SummaryItem(
                     label = "Expense",
-                    value = if (hideValues) "Rp*****" else "Rp 30,000",
+                    value = if (hideValues) "Rp****" else formatRupiah(expense),
                     color = Color(0xFFF44336),
-                    icon = Icons.Default.TrendingDown
+                    icon = Icons.AutoMirrored.Filled.TrendingDown
                 )
             }
         }
@@ -162,8 +168,21 @@ fun SummaryItem(
 @Preview(showBackground = true)
 @Composable
 fun BookSummaryCardPreview() {
+    val dummyWallets = listOf(
+        WalletModel(id = 1, name = "Cash", balance = 500000.0),
+        WalletModel(id = 2, name = "Bank", balance = 1500000.0)
+    )
+
+    val dummyBook = BookModel(
+        id = 1,
+        name = "Personal Budget",
+        totalIncome = 3000000.0,
+        totalExpense = 1200000.0,
+        wallets = dummyWallets
+    )
+
     BookSummaryCard(
-        book = BookModel(id = 1, name = "Test Book"),
+        book = dummyBook,
         hideValues = false,
         onToggleVisibility = {}
     )

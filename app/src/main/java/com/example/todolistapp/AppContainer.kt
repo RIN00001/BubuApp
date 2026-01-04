@@ -9,10 +9,44 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-// HAPUS DEFINISI DATASTORE DISINI.
-// Kita gunakan yang sudah ada di BubuApplication.kt
-
 interface AppContainerInterface {
+    val authenticationRepository: AuthenticationRepositoryInterface
+    val userRepository: UserRepositoryInterface
+
+    // NEW MODULES
+    val bookRepository: BookRepositoryInterface
+    val walletRepository: WalletRepositoryInterface
+}
+
+class AppContainer (
+    private val dataStore: DataStore<Preferences>
+) : AppContainerInterface {
+
+    private val backendURL = "http://192.168.0.30:3000/"
+
+    // FIRST: USER REPO (required for TokenInterceptor)
+    private val _userRepository: UserRepositoryInterface by lazy {
+        UserRepository(dataStore)
+    }
+
+    // RETROFIT SERVICES -----------------------------------------------------
+
+    private val authenticationService: AuthenticationAPIService by lazy {
+        val retrofit = initRetrofit(_userRepository)
+        retrofit.create(AuthenticationAPIService::class.java)
+    }
+
+    private val bookService: BookAPIService by lazy {
+        val retrofit = initRetrofit(_userRepository)
+        retrofit.create(BookAPIService::class.java)
+    }
+
+    private val walletService: WalletAPIService by lazy {
+        val retrofit = initRetrofit(_userRepository)
+        retrofit.create(WalletAPIService::class.java)
+    }
+
+    // REPOSITORIES ----------------------------------------------------------
     val authenticationRepository: AuthenticationRepository
     val userRepository: UserRepository
     val itemRepository: ItemRepository

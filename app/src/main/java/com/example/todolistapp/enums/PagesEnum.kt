@@ -22,6 +22,13 @@ enum class PagesEnum {
     WalletCreate,
     WalletEdit,
 
+    // Saving
+    CreateSaving,
+    EditSaving,
+    SavingDetail,
+    AddAmount,
+
+
     // --- TAMBAHAN FITUR KAMU (ITEM & CATEGORY) ---
     CreateItem,
     EditItem,       // (Opsional, buat jaga-jaga kalau nanti ada edit)
