@@ -211,7 +211,7 @@ class SavingListFormViewModel(
 
                             resetViewModel()
 
-                            navController.navigate(PagesEnum.Books.name) {
+                            navController.navigate(PagesEnum.Saving.name) {
                                 popUpTo(PagesEnum.CreateSaving.name) {
                                     inclusive = true
                                 }
@@ -279,7 +279,7 @@ class SavingListFormViewModel(
 
                             resetViewModel()
 
-                            navController.navigate(PagesEnum.Books.name) {
+                            navController.navigate(PagesEnum.Saving.name) {
                                 popUpTo(PagesEnum.EditSaving.name) {
                                     inclusive = true
                                 }
@@ -338,7 +338,7 @@ class SavingListFormViewModel(
         checkNullFormValues()
 
         navController.navigate(PagesEnum.EditSaving.name) {
-            popUpTo(PagesEnum.Books.name) {
+            popUpTo(PagesEnum.Saving.name) {
                 inclusive = false
             }
         }
@@ -432,6 +432,56 @@ class SavingListFormViewModel(
                 submissionStatus = StringDataStatusUIState.Failed(error.localizedMessage ?: "Unknown error")
             } catch (error: Exception) {
                 Log.e("AddAmount", "Exception: ${error.message}", error)
+                submissionStatus = StringDataStatusUIState.Failed(error.localizedMessage ?: "Unknown error")
+            }
+        }
+    }
+
+    fun deleteSaving(token: String, userId: Int, savingId: Int, navController: NavHostController) {
+        viewModelScope.launch {
+            submissionStatus = StringDataStatusUIState.Loading
+
+            try {
+                val call = savingRepository.deleteSaving(
+                    token = token,
+                    userId = userId,
+                    id = savingId
+                )
+
+                call.enqueue(object: Callback<GeneralResponseModel> {
+                    override fun onResponse(
+                        call: Call<GeneralResponseModel>,
+                        res: Response<GeneralResponseModel>
+                    ) {
+                        if (res.isSuccessful) {
+                            submissionStatus = StringDataStatusUIState.Success("Saving deleted successfully")
+                            resetViewModel()
+                            // Refresh the saving list by navigating back
+                            navController.navigate(PagesEnum.Saving.name) {
+                                popUpTo(PagesEnum.Saving.name) {
+                                    inclusive = true
+                                }
+                            }
+                        } else {
+                            val message = extractErrorMessage(res)
+                            submissionStatus = StringDataStatusUIState.Failed(message)
+
+                            if (res.code() == 401) {
+                                viewModelScope.launch {
+                                    GlobalUtil.resetUsernameToken(userRepository)
+                                }
+                                navController.navigate(PagesEnum.Login.name) {
+                                    popUpTo(PagesEnum.Saving.name) { inclusive = true }
+                                }
+                            }
+                        }
+                    }
+
+                    override fun onFailure(call: Call<GeneralResponseModel>, t: Throwable) {
+                        submissionStatus = StringDataStatusUIState.Failed(t.localizedMessage ?: "Unknown error")
+                    }
+                })
+            } catch (error: IOException) {
                 submissionStatus = StringDataStatusUIState.Failed(error.localizedMessage ?: "Unknown error")
             }
         }

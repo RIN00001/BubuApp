@@ -46,9 +46,11 @@ import com.example.todolistapp.enums.PagesEnum
 import com.example.todolistapp.uiStates.AuthenticationStatusUIState
 import com.example.todolistapp.uiStates.SavingListUIState
 import com.example.todolistapp.viewModels.AuthenticationViewModel
+import com.example.todolistapp.viewModels.HomeViewModel
 import com.example.todolistapp.viewModels.SavingDetailViewModel
 import com.example.todolistapp.viewModels.SavingListFormViewModel
 import com.example.todolistapp.viewModels.SavingListViewModel
+import com.example.todolistapp.viewModels.SharedDataViewModel
 import com.example.todolistapp.views.*
 import com.example.todolistapp.views.components.book.BookDetailView
 import com.example.todolistapp.views.components.book.BooksList
@@ -196,6 +198,18 @@ fun AppNavigation(
             val savingDetailViewModel: SavingDetailViewModel = viewModel(factory = SavingDetailViewModel.Factory)
             val token by savingFormViewModel.token.collectAsState(initial = "")
 
+            LaunchedEffect(Unit) {
+                SharedDataViewModel.editingSavingModel?.let { savingModel ->
+                    savingFormViewModel.loadEditData(savingModel)
+                }
+            }
+
+            LaunchedEffect(token) {
+                if (token.isNotEmpty()) {
+                    savingFormViewModel.checkNullFormValues()
+                }
+            }
+
             SavingListFormView(
                 modifier = Modifier
                     .fillMaxSize()
@@ -229,10 +243,34 @@ fun AppNavigation(
         }
 
         composable(PagesEnum.AddAmount.name) {
-            Text(
-                text = "Add Amount Page (Under Construction)",
-                modifier = Modifier.fillMaxSize()
-            )
+            val savingFormViewModel: SavingListFormViewModel = viewModel(factory = SavingListFormViewModel.Factory)
+            val homeViewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
+            val token by savingFormViewModel.token.collectAsState(initial = "")
+            val savingModel = SharedDataViewModel.currentSavingModel
+
+            if (savingModel != null) {
+                SavingAddAmountView(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    context = context,
+                    navController = navController,
+                    savingListFormViewModel = savingFormViewModel,
+                    homeViewModel = homeViewModel,
+                    token = token,
+                    userId = 1,
+                    savingModel = savingModel
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Error: No saving data found")
+                }
+            }
         }
 
         // ==========================================
