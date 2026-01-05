@@ -3,6 +3,7 @@ package com.example.todolistapp.views
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -18,7 +19,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.bubuapp.views.components.NavigationBar
 import com.example.todolistapp.enums.PagesEnum
+import com.example.todolistapp.navigation.SavingListView
 import com.example.todolistapp.viewModels.AuthenticationViewModel
 import com.example.todolistapp.viewModels.HomeViewModel
 import com.example.todolistapp.viewModels.SavingDetailViewModel
@@ -60,6 +63,13 @@ fun SavingListApp(
             val savingFormViewModel: SavingListFormViewModel = viewModel(factory = SavingListFormViewModel.Factory)
             val savingDetailViewModel: SavingDetailViewModel = viewModel(factory = SavingDetailViewModel.Factory)
             val token by savingFormViewModel.token.collectAsState(initial = "")
+
+            LaunchedEffect(token) {
+                if (token.isNotEmpty()) {
+                    savingFormViewModel.checkNullFormValues()
+                }
+            }
+
             SavingListFormView(
                 modifier = Modifier
                     .fillMaxSize()
@@ -81,6 +91,12 @@ fun SavingListApp(
             LaunchedEffect(Unit) {
                 SharedDataViewModel.editingSavingModel?.let { savingModel ->
                     savingFormViewModel.loadEditData(savingModel)
+                }
+            }
+
+            LaunchedEffect(token) {
+                if (token.isNotEmpty()) {
+                    savingFormViewModel.checkNullFormValues()
                 }
             }
 
@@ -152,6 +168,42 @@ fun SavingListApp(
                     ) {
                         Text("Back to Saving")
                     }
+                }
+            }
+        }
+
+        composable(route = PagesEnum.Books.name) {
+            Scaffold(
+                bottomBar = {
+                    NavigationBar(navController)
+                }
+            ) { padding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                ) {
+                    HomeView(
+                        navController = navController
+                    )
+                }
+            }
+        }
+
+        composable(route = PagesEnum.Saving.name) {
+            Scaffold(
+                bottomBar = {
+                    NavigationBar(navController)
+                }
+            ) { padding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                ) {
+                    SavingListView(
+                        navController = navController
+                    )
                 }
             }
         }

@@ -140,6 +140,10 @@ fun SavingListFormView(
                 )
                 else -> Button(
                     onClick = {
+                        if (token.isEmpty()) {
+                            Toast.makeText(context, "Token tidak ditemukan. Silakan login kembali.", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
                         if (savingListFormViewModel.isUpdate) {
                             savingListFormViewModel.updateSaving(
                                 token = token,
@@ -152,7 +156,7 @@ fun SavingListFormView(
                     },
                     modifier = Modifier
                         .fillMaxWidth(),
-                    enabled = savingListFormUIState.value.saveButtonEnabled,
+                    enabled = savingListFormUIState.value.saveButtonEnabled && token.isNotEmpty(),
                     colors = ButtonDefaults.buttonColors(savingListFormViewModel.changeSaveButtonColor())
                 ) {
                     Text(text = stringResource(R.string.save_text))

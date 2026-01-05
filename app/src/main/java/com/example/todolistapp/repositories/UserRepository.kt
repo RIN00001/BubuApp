@@ -20,8 +20,8 @@ interface UserRepositoryInterface {
 class UserRepository (
     private val userDataStore: DataStore<Preferences>
 ): UserRepositoryInterface {
-    override val currentUserToken: Flow<String> = userDataStore.data.map { preferences -> preferences[USER_TOKEN] ?: "Unknown" }
-    override val currentUsername: Flow<String> = userDataStore.data.map { preferences -> preferences[USERNAME] ?: "Unknown" }
+    override val currentUserToken: Flow<String> = userDataStore.data.map { preferences -> preferences[USER_TOKEN] ?: "" }
+    override val currentUsername: Flow<String> = userDataStore.data.map { preferences -> preferences[USERNAME] ?: "" }
 
     override suspend fun saveUserToken(token: String) {
         userDataStore.edit { preferences -> preferences[USER_TOKEN] = token }
