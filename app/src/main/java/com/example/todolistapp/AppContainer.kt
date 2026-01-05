@@ -8,8 +8,9 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 
-// 1. Definisikan Interface dengan semua Repository yang dibutuhkan
+// 1. Definisikan Interface Semua Repo
 interface AppContainerInterface {
     val authenticationRepository: AuthenticationRepositoryInterface
     val userRepository: UserRepositoryInterface
@@ -17,75 +18,93 @@ interface AppContainerInterface {
     val categoryRepository: CategoryRepositoryInterface
     val bookRepository: BookRepositoryInterface
     val walletRepository: WalletRepositoryInterface
+
+    // NEW: Saving
+    val savingRepository: SavingRepositoryInterface
 }
 
 class AppContainer(private val context: Context) : AppContainerInterface {
 
-    // 2. Base URL (Gunakan 10.0.2.2 untuk Emulator Android Studio)
-    private val backendURL = "http://10.0.2.2:3000/"
+    companion object {
+        // Ganti IP jika perlu (10.0.2.2 untuk emulator)
+        private const val BASE_URL = "http://10.0.2.2:3000/"
+        private const val TIMEOUT_DURATION = 30L // Detik
+    }
 
-    // 3. User Repository (Harus pertama karena dibutuhkan oleh Interceptor)
+    // =========================================================================
+    // CORE (Network & User)
+    // =========================================================================
+
     override val userRepository: UserRepositoryInterface by lazy {
         UserRepository(context.dataStore)
     }
 
-    // 4. Setup Network (Client & Retrofit)
-    private val tokenInterceptor by lazy {
-        TokenInterceptor(userRepository)
-    }
+    private val okHttpClient: OkHttpClient by lazy {
+        val logging = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+        val tokenInterceptor = TokenInterceptor(userRepository)
 
-    private val client: OkHttpClient by lazy {
         OkHttpClient.Builder()
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
-            })
+            .addInterceptor(logging)
             .addInterceptor(tokenInterceptor)
+            .connectTimeout(TIMEOUT_DURATION, TimeUnit.SECONDS)
+            .readTimeout(TIMEOUT_DURATION, TimeUnit.SECONDS)
+            .writeTimeout(TIMEOUT_DURATION, TimeUnit.SECONDS)
             .build()
     }
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl(backendURL)
+            .baseUrl(BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
-            .client(client)
+            .client(okHttpClient)
             .build()
     }
 
-    // 5. API Services
-    private val authenticationService: AuthenticationAPIService by lazy {
-        retrofit.create(AuthenticationAPIService::class.java)
-    }
-    private val itemAPIService: ItemAPIService by lazy {
-        retrofit.create(ItemAPIService::class.java)
-    }
-    private val categoryAPIService: CategoryAPIService by lazy {
-        retrofit.create(CategoryAPIService::class.java)
-    }
-    private val bookAPIService: BookAPIService by lazy {
-        retrofit.create(BookAPIService::class.java)
-    }
-    private val walletAPIService: WalletAPIService by lazy {
-        retrofit.create(WalletAPIService::class.java)
-    }
+    // =========================================================================
+    // SERVICES
+    // =========================================================================
 
-    // 6. Repositories (Implementasi Interface)
+    private val authService: AuthenticationAPIService by lazy {
+        retrofit.create(
+            AuthenticationAPIService::class.java
+        )
+    }
+    private val itemService: ItemAPIService by lazy { retrofit.create(ItemAPIService::class.java) }
+    private val categoryService: CategoryAPIService by lazy { retrofit.create(CategoryAPIService::class.java) }
+    private val bookService: BookAPIService by lazy { retrofit.create(BookAPIService::class.java) }
+    private val walletService: WalletAPIService by lazy { retrofit.create(WalletAPIService::class.java) }
+
+    // NEW: Saving Service
+    private val savingService: SavingAPIService by lazy { retrofit.create(SavingAPIService::class.java) }
+
+    // =========================================================================
+    // REPOSITORIES
+    // =========================================================================
+
     override val authenticationRepository: AuthenticationRepositoryInterface by lazy {
-        AuthenticationRepository(authenticationService)
+        AuthenticationRepository(authService)
     }
 
     override val itemRepository: ItemRepositoryInterface by lazy {
-        ItemRepository(itemAPIService)
+        ItemRepository(itemService)
     }
 
     override val categoryRepository: CategoryRepositoryInterface by lazy {
-        CategoryRepository(categoryAPIService)
+        CategoryRepository(categoryService)
     }
 
     override val bookRepository: BookRepositoryInterface by lazy {
-        BookRepository(bookAPIService)
+        BookRepository(bookService)
     }
 
     override val walletRepository: WalletRepositoryInterface by lazy {
-        WalletRepository(walletAPIService)
+        WalletRepository(walletService)
+    }
+
+    // NEW: Saving Repository
+    override val savingRepository: SavingRepositoryInterface by lazy {
+        SavingRepository(savingService)
     }
 }

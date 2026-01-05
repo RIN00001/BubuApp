@@ -10,7 +10,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavHostController
-import com.example.todolistapp.TodoListApplication
+import com.example.todolistapp.BubuApplication
 import com.example.todolistapp.enums.PagesEnum
 import com.example.todolistapp.models.ErrorModel
 import com.example.todolistapp.models.GeneralResponseModel
@@ -55,7 +55,7 @@ class SavingDetailViewModel(
                                 navController.popBackStack()
                             } else {
                                 navController.navigate(PagesEnum.SavingDetail.name) {
-                                    popUpTo(PagesEnum.Home.name) {
+                                    popUpTo(PagesEnum.Books.name) {
                                         inclusive = false
                                     }
                                 }
@@ -74,7 +74,7 @@ class SavingDetailViewModel(
                                 }
 
                                 navController.navigate(PagesEnum.Login.name) {
-                                    popUpTo(PagesEnum.TodoDetail.name) {
+                                    popUpTo(PagesEnum.Books.name) {
                                         inclusive = true
                                     }
                                 }
@@ -145,7 +145,7 @@ class SavingDetailViewModel(
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                val application = (this[APPLICATION_KEY] as TodoListApplication)
+                val application = (this[APPLICATION_KEY] as BubuApplication)
                 val savingRepository = application.container.savingRepository
                 val userRepository = application.container.userRepository
 

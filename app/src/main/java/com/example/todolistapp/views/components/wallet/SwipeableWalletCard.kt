@@ -114,12 +114,38 @@ fun SwipeableWalletCard(
                         )
                     }
 
-                    // Wallet Name
-                    Text(
-                        text = wallet.name,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    // --- BAGIAN INI DIMODIFIKASI UNTUK LABEL DEFAULT ---
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Nama Wallet
+                            Text(
+                                text = wallet.name,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+
+                            // Logic Badge Default
+                            if (wallet.isDefault) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            color = Color(0xFFE8F5E9), // Hijau Muda (Sama kayak background icon)
+                                            shape = RoundedCornerShape(4.dp)
+                                        )
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "Default",
+                                        color = Color(0xFF2E7D32), // Hijau Tua
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    // ---------------------------------------------------
                 }
 
                 // Balance and IDR
@@ -142,4 +168,3 @@ fun SwipeableWalletCard(
         }
     }
 }
-

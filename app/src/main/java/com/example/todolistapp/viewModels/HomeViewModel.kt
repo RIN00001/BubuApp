@@ -11,13 +11,13 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.todolistapp.BubuApplication
 import com.example.todolistapp.models.DeleteItemResponse
 import com.example.todolistapp.models.GetAllItemsResponse
-import com.example.todolistapp.repositories.ItemRepository
+import com.example.todolistapp.repositories.ItemRepositoryInterface
 import com.example.todolistapp.uiStates.HomeUIState
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
-class HomeViewModel(private val itemRepository: ItemRepository) : ViewModel() {
+class HomeViewModel(private val itemRepository: ItemRepositoryInterface) : ViewModel() {
 
     var homeUIState: HomeUIState by mutableStateOf(HomeUIState.Loading)
         private set
@@ -48,7 +48,7 @@ class HomeViewModel(private val itemRepository: ItemRepository) : ViewModel() {
                         homeUIState = HomeUIState.Success(listData)
                     } else {
                         // Sukses tapi list kosong (atau null)
-                        homeUIState = HomeUIState.Error
+                        homeUIState = HomeUIState.Success(emptyList()) // Lebih baik return empty list daripada error
                     }
                 } else {
                     // Error dari server (404, 500, dll)
@@ -66,9 +66,7 @@ class HomeViewModel(private val itemRepository: ItemRepository) : ViewModel() {
     }
 
     fun deleteItem(itemId: Int) {
-        // Hati-hati: Delete biasanya tidak mengubah state loading utama agar layar tidak berkedip,
-        // tapi tergantung kebutuhan UI kamu. Di sini kita langsung panggil.
-
+        // Hati-hati: Delete biasanya tidak mengubah state loading utama agar layar tidak berkedip
         val call = itemRepository.deleteItem(itemId)
 
         call.enqueue(object : Callback<DeleteItemResponse> {
@@ -94,8 +92,12 @@ class HomeViewModel(private val itemRepository: ItemRepository) : ViewModel() {
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
+                // Pastikan casting ke BubuApplication (sesuai nama App kamu)
                 val application = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as BubuApplication)
+
+                // Sekarang tipe datanya cocok (sama-sama Interface)
                 val itemRepository = application.container.itemRepository
+
                 HomeViewModel(itemRepository = itemRepository)
             }
         }

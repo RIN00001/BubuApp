@@ -2,6 +2,7 @@ package com.example.todolistapp.viewModels
 
 import android.app.DatePickerDialog
 import android.content.Context
+import android.util.Log
 import android.widget.DatePicker
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -9,37 +10,38 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavHostController
+import com.example.todolistapp.BubuApplication
+import com.example.todolistapp.enums.PagesEnum
+import com.example.todolistapp.models.GeneralResponseModel
+import com.example.todolistapp.models.SavingModel
 import com.example.todolistapp.repositories.SavingRepositoryInterface
 import com.example.todolistapp.repositories.UserRepositoryInterface
 import com.example.todolistapp.uiStates.SavingListFormUIState
+import com.example.todolistapp.uiStates.StringDataStatusUIState
+import com.example.todolistapp.utils.GlobalUtil
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import java.text.ParseException
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
-import com.example.todolistapp.enums.PagesEnum
-import com.example.todolistapp.models.GeneralResponseModel
-import com.example.todolistapp.models.SavingModel
-import com.example.todolistapp.uiStates.StringDataStatusUIState
-import com.example.todolistapp.utils.GlobalUtil
-import com.google.gson.Gson
-import com.google.gson.JsonObject
 import kotlinx.coroutines.launch
 import okio.IOException
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.text.ParseException
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class SavingListFormViewModel(
     private val savingRepository: SavingRepositoryInterface,
@@ -175,17 +177,6 @@ class SavingListFormViewModel(
         return nameOk && curr != null && target > 0 && dateOk
     }
 
-    companion object {
-        val Factory: ViewModelProvider.Factory = viewModelFactory {
-            initializer {
-                val application = (this[APPLICATION_KEY] as TodoListApplication)
-                val savingRepository = application.container.savingRepository
-                val userRepository = application.container.userRepository
-                SavingListFormViewModel(savingRepository, userRepository)
-            }
-        }
-    }
-
     fun createSaving(navController: NavHostController, token: String, userId: Int) {
         viewModelScope.launch {
             submissionStatus = StringDataStatusUIState.Loading
@@ -220,7 +211,7 @@ class SavingListFormViewModel(
 
                             resetViewModel()
 
-                            navController.navigate(PagesEnum.Home.name) {
+                            navController.navigate(PagesEnum.Books.name) {
                                 popUpTo(PagesEnum.CreateSaving.name) {
                                     inclusive = true
                                 }
@@ -288,7 +279,7 @@ class SavingListFormViewModel(
 
                             resetViewModel()
 
-                            navController.navigate(PagesEnum.Home.name) {
+                            navController.navigate(PagesEnum.Books.name) {
                                 popUpTo(PagesEnum.EditSaving.name) {
                                     inclusive = true
                                 }
@@ -347,7 +338,7 @@ class SavingListFormViewModel(
         checkNullFormValues()
 
         navController.navigate(PagesEnum.EditSaving.name) {
-            popUpTo(PagesEnum.Home.name) {
+            popUpTo(PagesEnum.Books.name) {
                 inclusive = false
             }
         }
@@ -385,10 +376,10 @@ class SavingListFormViewModel(
             submissionStatus = StringDataStatusUIState.Loading
 
             try {
-                android.util.Log.d("AddAmount", "Starting addAmountToSaving - userId: $userId, savingId: ${savingModel.id}, amount: $amountToAdd")
+                Log.d("AddAmount", "Starting addAmountToSaving - userId: $userId, savingId: ${savingModel.id}, amount: $amountToAdd")
 
                 val newAmount = savingModel.amount + amountToAdd
-                android.util.Log.d("AddAmount", "New amount calculated: $newAmount (${savingModel.amount} + $amountToAdd)")
+                Log.d("AddAmount", "New amount calculated: $newAmount (${savingModel.amount} + $amountToAdd)")
 
                 val updateCall = savingRepository.updateSaving(
                     token = token,
@@ -407,22 +398,22 @@ class SavingListFormViewModel(
                         res: Response<GeneralResponseModel>
                     ) {
                         viewModelScope.launch {
-                            android.util.Log.d("AddAmount", "UpdateSaving response - isSuccessful: ${res.isSuccessful}, code: ${res.code()}")
+                            Log.d("AddAmount", "UpdateSaving response - isSuccessful: ${res.isSuccessful}, code: ${res.code()}")
 
                             if (res.isSuccessful) {
                                 submissionStatus = StringDataStatusUIState.Success("Amount added successfully")
                                 currentSavingModel = null
                                 onSuccess()
-                                android.util.Log.d("AddAmount", "Success! Amount added")
+                                Log.d("AddAmount", "Success! Amount added")
                             } else {
                                 val message = extractErrorMessage(res)
-                                android.util.Log.e("AddAmount", "UpdateSaving failed: $message")
+                                Log.e("AddAmount", "UpdateSaving failed: $message")
                                 submissionStatus = StringDataStatusUIState.Failed(message)
 
                                 if (res.code() == 401) {
                                     GlobalUtil.resetUsernameToken(userRepository)
                                     navController.navigate(PagesEnum.Login.name) {
-                                        popUpTo(PagesEnum.Home.name) { inclusive = true }
+                                        popUpTo(PagesEnum.Books.name) { inclusive = true }
                                     }
                                 }
                             }
@@ -431,16 +422,16 @@ class SavingListFormViewModel(
 
                     override fun onFailure(call: Call<GeneralResponseModel>, t: Throwable) {
                         viewModelScope.launch {
-                            android.util.Log.e("AddAmount", "UpdateSaving network error: ${t.message}", t)
+                            Log.e("AddAmount", "UpdateSaving network error: ${t.message}", t)
                             submissionStatus = StringDataStatusUIState.Failed(t.localizedMessage ?: "Network error")
                         }
                     }
                 })
             } catch (error: IOException) {
-                android.util.Log.e("AddAmount", "IOException: ${error.message}", error)
+                Log.e("AddAmount", "IOException: ${error.message}", error)
                 submissionStatus = StringDataStatusUIState.Failed(error.localizedMessage ?: "Unknown error")
             } catch (error: Exception) {
-                android.util.Log.e("AddAmount", "Exception: ${error.message}", error)
+                Log.e("AddAmount", "Exception: ${error.message}", error)
                 submissionStatus = StringDataStatusUIState.Failed(error.localizedMessage ?: "Unknown error")
             }
         }
@@ -468,5 +459,17 @@ class SavingListFormViewModel(
 
     fun clearErrorMessage() {
         submissionStatus = StringDataStatusUIState.Start
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                // PERBAIKAN: Menggunakan BubuApplication agar sesuai dengan project kamu
+                val application = (this[APPLICATION_KEY] as BubuApplication)
+                val savingRepository = application.container.savingRepository
+                val userRepository = application.container.userRepository
+                SavingListFormViewModel(savingRepository, userRepository)
+            }
+        }
     }
 }
