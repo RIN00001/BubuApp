@@ -8,6 +8,9 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.todolistapp.BubuApplication
 import com.example.todolistapp.models.BookCreateRequest
 import com.example.todolistapp.models.ErrorModel
+import com.example.todolistapp.models.AttachWalletResponse
+import com.example.todolistapp.models.DetachWalletResponse
+import com.example.todolistapp.repositories.BookRepository
 import com.example.todolistapp.repositories.BookRepositoryInterface
 import com.example.todolistapp.repositories.UserRepositoryInterface
 import com.example.todolistapp.uiStates.BookListStatusUIState
@@ -210,6 +213,64 @@ class BookViewModel(
 
             } catch (ex: IOException) {
                 _mutationState.value = BookMutationStatusUIState.Failed(ex.localizedMessage)
+            }
+        }
+    }
+
+    // -----------------------------
+    // Attach Wallet to Book
+    // -----------------------------
+    fun attachWallet(bookId: Int, walletId: Int, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val call = bookRepository.attachWallet(bookId, walletId)
+
+                call.enqueue(object : Callback<AttachWalletResponse> {
+                    override fun onResponse(
+                        call: Call<AttachWalletResponse>,
+                        res: Response<AttachWalletResponse>
+                    ) {
+                        if (res.isSuccessful) {
+                            onSuccess()
+                        }
+                    }
+
+                    override fun onFailure(call: Call<AttachWalletResponse>, t: Throwable) {
+                        // Handle failure silently or log
+                    }
+                })
+
+            } catch (_: IOException) {
+                // Handle exception
+            }
+        }
+    }
+
+    // -----------------------------
+    // Detach Wallet from Book
+    // -----------------------------
+    fun detachWallet(bookId: Int, walletId: Int, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val call = bookRepository.detachWallet(bookId, walletId)
+
+                call.enqueue(object : Callback<DetachWalletResponse> {
+                    override fun onResponse(
+                        call: Call<DetachWalletResponse>,
+                        res: Response<DetachWalletResponse>
+                    ) {
+                        if (res.isSuccessful) {
+                            onSuccess()
+                        }
+                    }
+
+                    override fun onFailure(call: Call<DetachWalletResponse>, t: Throwable) {
+                        // Handle failure silently or log
+                    }
+                })
+
+            } catch (_: IOException) {
+                // Handle exception
             }
         }
     }

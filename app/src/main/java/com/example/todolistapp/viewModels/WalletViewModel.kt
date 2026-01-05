@@ -33,6 +33,10 @@ class WalletViewModel(
     private val _mutationState = MutableStateFlow<WalletMutationStatusUIState>(WalletMutationStatusUIState.Start)
     val mutationState: StateFlow<WalletMutationStatusUIState> = _mutationState.asStateFlow()
 
+    // Summary state for wallet details page
+    private val _summaryState = MutableStateFlow<WalletSummaryStatusUIState>(WalletSummaryStatusUIState.Start)
+    val summaryState: StateFlow<WalletSummaryStatusUIState> = _summaryState.asStateFlow()
+
     // GET ALL
     fun fetchWallets() {
         viewModelScope.launch {
@@ -203,6 +207,34 @@ class WalletViewModel(
         }
     }
 
+    // GET WALLET SUMMARY (with optional date filter)
+    fun fetchWalletSummary(walletId: Int, startDate: String? = null, endDate: String? = null) {
+        viewModelScope.launch {
+            _summaryState.value = WalletSummaryStatusUIState.Loading
+
+            try {
+                walletRepository.getWalletSummary(walletId, startDate, endDate)
+                    .enqueue(object : Callback<GetWalletSummaryResponse> {
+                        override fun onResponse(call: Call<GetWalletSummaryResponse>, res: Response<GetWalletSummaryResponse>) {
+                            if (res.isSuccessful) {
+                                _summaryState.value = WalletSummaryStatusUIState.Success(res.body()!!.data)
+                            } else {
+                                val error = Gson().fromJson(res.errorBody()!!.charStream(), ErrorModel::class.java)
+                                _summaryState.value = WalletSummaryStatusUIState.Failed(error.errors)
+                            }
+                        }
+
+                        override fun onFailure(call: Call<GetWalletSummaryResponse>, t: Throwable) {
+                            _summaryState.value = WalletSummaryStatusUIState.Failed(t.localizedMessage)
+                        }
+                    })
+
+            } catch (e: IOException) {
+                _summaryState.value = WalletSummaryStatusUIState.Failed(e.localizedMessage)
+            }
+        }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
@@ -224,4 +256,5 @@ class WalletViewModel(
     fun resetListState() { _listState.value = WalletListStatusUIState.Start }
     fun resetDetailState() { _detailState.value = WalletDetailStatusUIState.Start }
     fun resetMutationState() { _mutationState.value = WalletMutationStatusUIState.Start }
+    fun resetSummaryState() { _summaryState.value = WalletSummaryStatusUIState.Start }
 }

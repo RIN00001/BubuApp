@@ -22,4 +22,11 @@ interface WalletAPIService {
 
     @PATCH("api/wallets/{id}/default")
     fun setDefaultWallet(@Path("id") walletId: Int): Call<SetDefaultWalletResponse>
+
+    @GET("api/wallets/{id}/summary")
+    fun getWalletSummary(
+        @Path("id") walletId: Int,
+        @Query("startDate") startDate: String? = null,
+        @Query("endDate") endDate: String? = null
+    ): Call<GetWalletSummaryResponse>
 }

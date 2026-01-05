@@ -2,10 +2,11 @@ package com.example.todolistapp.views
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,24 +17,54 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.example.todolistapp.enums.PagesEnum
-import com.example.todolistapp.uiStates.WalletDetailStatusUIState
-import com.example.todolistapp.utils.formatRupiah
+import com.example.todolistapp.uiStates.WalletSummaryStatusUIState
+import com.example.todolistapp.uiStates.BookListStatusUIState
 import com.example.todolistapp.viewModels.WalletViewModel
-import com.example.todolistapp.views.components.wallet._WalletDeletePopUp
+import com.example.todolistapp.viewModels.BookViewModel
+import com.example.todolistapp.views.components.wallet.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletDetailView(
     walletId: Int,
     navController: NavHostController,
-    walletViewModel: WalletViewModel = viewModel(factory = WalletViewModel.Factory)
+    currentBookId: Int? = null,
+    walletViewModel: WalletViewModel = viewModel(factory = WalletViewModel.Factory),
+    bookViewModel: BookViewModel = viewModel(factory = BookViewModel.Factory)
 ) {
-    val detailState by walletViewModel.detailState.collectAsState()
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    val summaryState by walletViewModel.summaryState.collectAsState()
+    val bookListState by bookViewModel.listState.collectAsState()
 
+    var showDateFilter by remember { mutableStateOf(false) }
+    var currentDateFilter by remember { mutableStateOf(getDateRangeForOption(DateFilterOption.THIS_WEEK)) }
+
+    // Track changes
+    var editedName by remember { mutableStateOf("") }
+    var attachedBookIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var hasChanges by remember { mutableStateOf(false) }
+    var showSaveSuccess by remember { mutableStateOf(false) }
+
+    // Load initial data
     LaunchedEffect(walletId) {
-        walletViewModel.fetchWalletDetail(walletId)
+        walletViewModel.fetchWalletSummary(
+            walletId,
+            currentDateFilter.startDate,
+            currentDateFilter.endDate
+        )
+        bookViewModel.fetchBooks()
+    }
+
+    // Initialize data from summary
+    LaunchedEffect(summaryState) {
+        if (summaryState is WalletSummaryStatusUIState.Success) {
+            val summary = (summaryState as WalletSummaryStatusUIState.Success).data
+            if (editedName.isEmpty()) {
+                editedName = summary.name
+            }
+            if (attachedBookIds.isEmpty()) {
+                attachedBookIds = summary.usedInBooks.map { it.id }.toSet()
+            }
+        }
     }
 
     Scaffold(
@@ -62,24 +93,49 @@ fun WalletDetailView(
             )
         },
         floatingActionButton = {
-            when (detailState) {
-                is WalletDetailStatusUIState.Success -> {
-                    val wallet = (detailState as WalletDetailStatusUIState.Success).data
-                    FloatingActionButton(
-                        onClick = {
-                            navController.navigate(PagesEnum.WalletEdit.name + "/${wallet.id}")
-                        },
-                        containerColor = Color(0xFFAD88C6),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit Wallet",
-                            tint = Color.White
+            if (hasChanges && summaryState is WalletSummaryStatusUIState.Success) {
+                FloatingActionButton(
+                    onClick = {
+                        val summary = (summaryState as WalletSummaryStatusUIState.Success).data
+                        val originalBookIds = summary.usedInBooks.map { it.id }.toSet()
+
+                        // Update wallet name if changed
+                        if (editedName != summary.name) {
+                            walletViewModel.updateWallet(walletId, editedName, summary.balance)
+                        }
+
+                        // Handle book attachments/detachments
+                        val booksToAttach = attachedBookIds - originalBookIds
+                        val booksToDetach = originalBookIds - attachedBookIds
+
+                        booksToAttach.forEach { bookId ->
+                            bookViewModel.attachWallet(bookId, walletId)
+                        }
+
+                        booksToDetach.forEach { bookId ->
+                            bookViewModel.detachWallet(bookId, walletId)
+                        }
+
+                        // Show success message
+                        showSaveSuccess = true
+                        hasChanges = false
+
+                        // Refresh data
+                        walletViewModel.fetchWalletSummary(
+                            walletId,
+                            currentDateFilter.startDate,
+                            currentDateFilter.endDate
                         )
-                    }
+                    },
+                    containerColor = Color(0xFFAD88C6),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Save,
+                        contentDescription = "Save Changes",
+                        tint = Color.White
+                    )
                 }
-                else -> {}
             }
         }
     ) { padding ->
@@ -89,8 +145,8 @@ fun WalletDetailView(
                 .background(Color(0xFFFFE6E6))
                 .padding(padding)
         ) {
-            when (detailState) {
-                is WalletDetailStatusUIState.Loading -> {
+            when (summaryState) {
+                is WalletSummaryStatusUIState.Loading -> {
                     CircularProgressIndicator(
                         modifier = Modifier
                             .align(Alignment.Center)
@@ -98,119 +154,220 @@ fun WalletDetailView(
                     )
                 }
 
-                is WalletDetailStatusUIState.Success -> {
-                    val wallet = (detailState as WalletDetailStatusUIState.Success).data
+                is WalletSummaryStatusUIState.Success -> {
+                    val summary = (summaryState as WalletSummaryStatusUIState.Success).data
+                    val books = when (bookListState) {
+                        is BookListStatusUIState.Success -> (bookListState as BookListStatusUIState.Success).data
+                        else -> emptyList()
+                    }
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Wallet Info Card
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(24.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                        // Wallet Summary Card
+                        item {
+                            WalletSummaryCard(
+                                summary = summary,
+                                currentDateLabel = currentDateFilter.label,
+                                onDateClick = { showDateFilter = true }
+                            )
+                        }
+
+                        // Editable Name Field
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White
+                                )
                             ) {
-                                Text(
-                                    text = wallet.name,
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Text(
-                                    text = formatRupiah(wallet.balance),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = Color(0xFF7469B6),
-                                    fontSize = 32.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                if (wallet.isDefault) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Surface(
-                                        color = Color(0xFFE8F5E9),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text(
-                                            text = "Default Wallet",
-                                            color = Color(0xFF4CAF50),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "Wallet Name",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF1C1B1F)
+                                    )
+                                    OutlinedTextField(
+                                        value = editedName,
+                                        onValueChange = {
+                                            editedName = it
+                                            hasChanges = true
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        placeholder = { Text("Enter wallet name") },
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Color(0xFF7469B6),
+                                            unfocusedBorderColor = Color.LightGray
                                         )
-                                    }
+                                    )
+                                    Text(
+                                        text = "Currency cannot be changed",
+                                        fontSize = 12.sp,
+                                        color = Color.Gray,
+                                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                    )
                                 }
                             }
                         }
 
-                        // Set as Default button (if not default)
-                        if (!wallet.isDefault) {
-                            Button(
-                                onClick = {
-                                    walletViewModel.setDefault(wallet.id)
-                                },
+                        // Book Attachments Section
+                        item {
+                            Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFAD88C6)
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(
-                                    "Set as Default",
-                                    modifier = Modifier.padding(vertical = 8.dp)
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White
                                 )
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                ) {
+                                    val currentBook = books.find { it.id == currentBookId }
+
+                                    WalletBookAttachmentSection(
+                                        currentBookId = currentBookId,
+                                        currentBookName = currentBook?.name,
+                                        allBooks = books,
+                                        attachedBookIds = attachedBookIds,
+                                        onToggleBook = { bookId, isAttached ->
+                                            attachedBookIds = if (isAttached) {
+                                                attachedBookIds + bookId
+                                            } else {
+                                                attachedBookIds - bookId
+                                            }
+                                            hasChanges = true
+                                        }
+                                    )
+                                }
                             }
                         }
 
-                        // Delete button
-                        OutlinedButton(
-                            onClick = { showDeleteDialog = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Color(0xFFFF0000)
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                "Delete Wallet",
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
+                        // Books currently attached (Read-only display)
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color(0xFFF5F5F5)
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text(
+                                        text = "Currently Used In",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF1C1B1F)
+                                    )
+                                    if (summary.usedInBooks.isEmpty()) {
+                                        Text(
+                                            text = "Not attached to any book",
+                                            fontSize = 14.sp,
+                                            color = Color.Gray
+                                        )
+                                    } else {
+                                        summary.usedInBooks.forEach { book ->
+                                            Column(
+                                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Text(
+                                                    text = book.name,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = Color(0xFF1C1B1F)
+                                                )
+                                                Text(
+                                                    text = book.program,
+                                                    fontSize = 12.sp,
+                                                    color = Color.Gray
+                                                )
+                                            }
+                                            if (book != summary.usedInBooks.last()) {
+                                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
-                    // Delete Dialog
-                    if (showDeleteDialog) {
-                        _WalletDeletePopUp(
-                            walletName = wallet.name,
-                            onConfirm = {
-                                walletViewModel.deleteWallet(wallet.id)
-                                showDeleteDialog = false
-                                navController.popBackStack()
-                            },
-                            onDismiss = {
-                                showDeleteDialog = false
+                    // Date Filter Dialog
+                    if (showDateFilter) {
+                        DateFilterPopup(
+                            currentFilter = currentDateFilter,
+                            onDismiss = { showDateFilter = false },
+                            onFilterSelected = { newFilter ->
+                                currentDateFilter = newFilter
+                                walletViewModel.fetchWalletSummary(
+                                    walletId,
+                                    newFilter.startDate,
+                                    newFilter.endDate
+                                )
                             }
                         )
                     }
+
+                    // Success Snackbar
+                    if (showSaveSuccess) {
+                        LaunchedEffect(Unit) {
+                            kotlinx.coroutines.delay(2000)
+                            showSaveSuccess = false
+                        }
+                        Snackbar(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .align(Alignment.BottomCenter),
+                            containerColor = Color(0xFF4CAF50)
+                        ) {
+                            Text("Changes saved successfully!", color = Color.White)
+                        }
+                    }
                 }
 
-                is WalletDetailStatusUIState.Failed -> {
-                    Text(
-                        text = "Failed to load wallet details",
+                is WalletSummaryStatusUIState.Failed -> {
+                    Column(
                         modifier = Modifier
                             .align(Alignment.Center)
                             .padding(16.dp),
-                        color = MaterialTheme.colorScheme.error
-                    )
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Failed to load wallet details",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 16.sp
+                        )
+                        Button(
+                            onClick = {
+                                walletViewModel.fetchWalletSummary(
+                                    walletId,
+                                    currentDateFilter.startDate,
+                                    currentDateFilter.endDate
+                                )
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF7469B6)
+                            )
+                        ) {
+                            Text("Retry")
+                        }
+                    }
                 }
 
                 else -> {}
