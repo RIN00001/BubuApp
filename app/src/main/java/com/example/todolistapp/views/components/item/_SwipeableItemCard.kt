@@ -26,16 +26,17 @@ import com.example.todolistapp.models.ItemModel
 @Composable
 fun SwipeableItemCard(
     item: ItemModel,
-    onClick: () -> Unit, // Opsional jika ingin detail
+    onClick: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit // Fungsi ini akan dipanggil oleh Swipe maupun Tombol
 ) {
+    // State untuk fitur Geser (Swipe)
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { dismissValue ->
             when (dismissValue) {
                 SwipeToDismissBoxValue.EndToStart -> {
-                    onDelete()
-                    false // Jangan langsung dismiss, tunggu konfirmasi dialog
+                    onDelete() // Panggil dialog hapus
+                    false // Return false agar card tidak langsung hilang sebelum konfirmasi
                 }
                 else -> false
             }
@@ -44,13 +45,15 @@ fun SwipeableItemCard(
 
     SwipeToDismissBox(
         state = dismissState,
-        enableDismissFromStartToEnd = false,
+        enableDismissFromStartToEnd = false, // Hanya bisa geser kanan ke kiri
         backgroundContent = {
             val color by animateColorAsState(
-                if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) Color.Red else Color.Transparent
+                if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) Color.Red else Color.Transparent,
+                label = "colorAnimation"
             )
             val scale by animateFloatAsState(
-                if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) 1.2f else 1f
+                if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) 1.2f else 1f,
+                label = "scaleAnimation"
             )
 
             Box(
@@ -84,9 +87,10 @@ fun SwipeableItemCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // ICON & NAMA
+                // ----------------------------------------------------
+                // KIRI: ICON PANAH & NAMA TRANSAKSI
+                // ----------------------------------------------------
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Icon Panah (Hijau jika Income, Merah jika Expense)
                     val isExpense = item.type == "EXPENSE"
                     Icon(
                         imageVector = if (isExpense) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
@@ -110,28 +114,48 @@ fun SwipeableItemCard(
                             fontSize = 16.sp
                         )
                         Text(
-                            text = item.type, // Bisa diganti tanggal jika ada
+                            text = if(isExpense) "Pengeluaran" else "Pemasukan",
                             fontSize = 12.sp,
                             color = Color.Gray
                         )
                     }
                 }
 
-                // NOMINAL & EDIT BUTTON
+                // ----------------------------------------------------
+                // KANAN: NOMINAL & ACTION BUTTONS (EDIT + DELETE)
+                // ----------------------------------------------------
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val amountText = "Rp ${item.amount.toLong()}"
                     Text(
                         text = if (item.type == "EXPENSE") "- $amountText" else "+ $amountText",
                         fontWeight = FontWeight.Bold,
                         color = if (item.type == "EXPENSE") Color.Red else Color(0xFF4CAF50),
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(end = 8.dp) // Beri jarak dengan tombol
                     )
 
-                    IconButton(onClick = onEdit) {
+                    // Tombol Edit
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier.size(32.dp) // Ukuran diperkecil sedikit agar rapi
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "Edit",
                             tint = Color.Gray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // [BARU] Tombol Delete
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete, // Icon Sampah
+                            contentDescription = "Delete",
+                            tint = Color(0xFFE57373), // Warna Merah Muda (Soft Red)
                             modifier = Modifier.size(20.dp)
                         )
                     }

@@ -15,17 +15,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.todolistapp.models.ItemModel
+import com.example.todolistapp.models.WalletModel // Pastikan import WalletModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun _ItemEditForm(
     item: ItemModel,
-    onSubmit: (name: String, amount: Double, type: String) -> Unit,
+    wallets: List<WalletModel>, // [BARU] List wallet
+    onSubmit: (name: String, amount: Double, type: String, walletId: Int?) -> Unit, // [BARU] walletId
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(item.name) }
-    // Konversi Double ke String tanpa format saintifik, hilangkan .0 jika bulat
     var amount by remember { mutableStateOf(item.amount.toLong().toString()) }
     var selectedType by remember { mutableStateOf(item.type) }
+
+    // State Dropdown (Cari wallet yang ID-nya sama dengan item.walletId)
+    var expanded by remember { mutableStateOf(false) }
+    var selectedWallet by remember {
+        mutableStateOf(wallets.find { it.id == item.walletId })
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -44,6 +52,7 @@ fun _ItemEditForm(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
+                // Nama
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -53,6 +62,7 @@ fun _ItemEditForm(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // Nominal
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { if (it.all { char -> char.isDigit() }) amount = it },
@@ -61,6 +71,39 @@ fun _ItemEditForm(
                     modifier = Modifier.fillMaxWidth(),
                     prefix = { Text("Rp ") }
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // [BARU] Dropdown Wallet Edit
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = selectedWallet?.name ?: "Pilih Wallet",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Wallet") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        wallets.forEach { wallet ->
+                            DropdownMenuItem(
+                                text = { Text(wallet.name) },
+                                onClick = {
+                                    selectedWallet = wallet
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -85,6 +128,7 @@ fun _ItemEditForm(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Actions
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(
                         onClick = onDismiss,
@@ -95,7 +139,8 @@ fun _ItemEditForm(
                     Button(
                         onClick = {
                             val amountDouble = amount.toDoubleOrNull() ?: 0.0
-                            onSubmit(name, amountDouble, selectedType)
+                            // Kirim ID Wallet yang dipilih (bisa null jika user menghapus pilihan)
+                            onSubmit(name, amountDouble, selectedType, selectedWallet?.id)
                         },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)

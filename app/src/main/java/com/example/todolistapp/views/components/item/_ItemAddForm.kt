@@ -11,21 +11,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.todolistapp.models.WalletModel // Pastikan import Model Wallet ada
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun _ItemAddForm(
-    onSubmit: (name: String, amount: Double, type: String) -> Unit
+    wallets: List<WalletModel>, // [BARU] Terima list wallet
+    onSubmit: (name: String, amount: Double, type: String, walletId: Int?) -> Unit // [BARU] Kirim walletId
 ) {
     var name by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf("EXPENSE") }
+
+    // State untuk Dropdown
+    var expanded by remember { mutableStateOf(false) }
+    var selectedWallet by remember { mutableStateOf<WalletModel?>(null) }
 
     Column(
         modifier = Modifier
             .padding(16.dp)
             .fillMaxWidth()
     ) {
-        // Input Nama
+        // 1. Input Nama
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
@@ -36,7 +43,7 @@ fun _ItemAddForm(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Input Nominal
+        // 2. Input Nominal
         OutlinedTextField(
             value = amount,
             onValueChange = { if (it.all { char -> char.isDigit() || char == '.' }) amount = it },
@@ -47,9 +54,66 @@ fun _ItemAddForm(
             prefix = { Text("Rp ") }
         )
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 3. [BARU] Dropdown Wallet
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = selectedWallet?.name ?: "Pilih Sumber Dana (Wallet)",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Wallet") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                if (wallets.isEmpty()) {
+                    DropdownMenuItem(
+                        text = { Text("Tidak ada wallet tersedia") },
+                        onClick = { expanded = false }
+                    )
+                } else {
+                    wallets.forEach { wallet ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(wallet.name, style = MaterialTheme.typography.bodyLarge)
+                                    Text("Sisa: Rp${wallet.balance}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                }
+                            },
+                            onClick = {
+                                selectedWallet = wallet
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        // Helper text jika wallet belum dipilih
+        if (selectedWallet == null) {
+            Text(
+                text = "* Wajib pilih wallet",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Pilihan Tipe (Income/Expense)
+        // 4. Pilihan Tipe (Income/Expense)
         Row(modifier = Modifier.fillMaxWidth()) {
             listOf("EXPENSE", "INCOME").forEach { type ->
                 Row(
@@ -82,12 +146,13 @@ fun _ItemAddForm(
         Button(
             onClick = {
                 val amountVal = amount.toDoubleOrNull()
-                if (name.isNotBlank() && amountVal != null) {
-                    onSubmit(name, amountVal, selectedType)
+                // Validasi: Nama, Amount, dan Wallet harus terisi
+                if (name.isNotBlank() && amountVal != null && selectedWallet != null) {
+                    onSubmit(name, amountVal, selectedType, selectedWallet!!.id)
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = name.isNotBlank() && amount.isNotBlank()
+            enabled = name.isNotBlank() && amount.isNotBlank() && selectedWallet != null
         ) {
             Text("Simpan Transaksi")
         }

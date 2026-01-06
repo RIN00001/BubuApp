@@ -3,7 +3,6 @@ package com.example.todolistapp.views
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
@@ -19,7 +18,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.todolistapp.enums.PagesEnum
 import com.example.todolistapp.viewModels.AuthenticationViewModel
-import kotlinx.coroutines.launch
+// Pastikan import ini sesuai dengan package tempat kamu menyimpan file NavigationBar.kt
+import com.example.bubuapp.views.components.NavigationBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +38,10 @@ fun SettingView(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
             )
+        },
+        // [BARU] Tambahkan Navigation Bar di sini
+        bottomBar = {
+            NavigationBar(navController = navController)
         }
     ) { paddingValues ->
         Column(
@@ -99,7 +103,7 @@ fun SettingView(
                 iconTint = MaterialTheme.colorScheme.error,
                 textColor = MaterialTheme.colorScheme.error,
                 onClick = {
-                    // Panggil fungsi reset di ViewModel (opsional jika ada)
+                    // Panggil fungsi reset di ViewModel
                     authViewModel.resetViewModel()
 
                     // Navigasi ke Login dan hapus history stack

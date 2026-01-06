@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.todolistapp.BubuApplication
 import com.example.todolistapp.models.*
 import com.example.todolistapp.repositories.ItemRepositoryInterface
+import com.example.todolistapp.repositories.WalletRepositoryInterface // [PENTING]
 import com.example.todolistapp.uiStates.ItemDetailStatusUIState
 import com.example.todolistapp.uiStates.ItemListStatusUIState
 import com.example.todolistapp.uiStates.ItemMutationStatusUIState
@@ -25,7 +26,8 @@ import java.util.Date
 import java.util.Locale
 
 class ItemViewModel(
-    private val itemRepository: ItemRepositoryInterface
+    private val itemRepository: ItemRepositoryInterface,
+    private val walletRepository: WalletRepositoryInterface // [BARU] Tambahkan Repo Wallet
 ) : ViewModel() {
 
     // ----------------------------------------------------------------
@@ -44,6 +46,10 @@ class ItemViewModel(
     private val _mutationState = MutableStateFlow<ItemMutationStatusUIState>(ItemMutationStatusUIState.Start)
     val mutationState: StateFlow<ItemMutationStatusUIState> = _mutationState.asStateFlow()
 
+    // [BARU] State Khusus Dropdown Wallet
+    private val _walletDropdownState = MutableStateFlow<List<WalletModel>>(emptyList())
+    val walletDropdownState: StateFlow<List<WalletModel>> = _walletDropdownState.asStateFlow()
+
 
     // ----------------------------------------------------------------
     // 2. READ OPERATIONS (GET)
@@ -54,8 +60,6 @@ class ItemViewModel(
         viewModelScope.launch {
             _listState.value = ItemListStatusUIState.Loading
             try {
-                // --- LOGIC BARU: GENERATE TANGGAL HARI INI ---
-                // Backend mewajibkan parameter date. Kita kirim tanggal hari ini "yyyy-MM-dd".
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 val todayDate = dateFormat.format(Date())
 
@@ -67,13 +71,10 @@ class ItemViewModel(
                             val items = res.body()?.data ?: emptyList()
                             _listState.value = ItemListStatusUIState.Success(items)
                         } else {
-                            // Parsing Error dari Backend
                             val errorMsg = try {
                                 val errorObj = Gson().fromJson(res.errorBody()?.charStream(), ErrorModel::class.java)
                                 errorObj?.errors ?: "Gagal memuat data"
-                            } catch (e: Exception) {
-                                res.message()
-                            }
+                            } catch (e: Exception) { res.message() }
                             _listState.value = ItemListStatusUIState.Failed(errorMsg)
                         }
                     }
@@ -87,7 +88,7 @@ class ItemViewModel(
         }
     }
 
-    // Fungsi: Mengambil detail 1 item (dipanggil saat mau edit)
+    // Fungsi: Mengambil detail 1 item
     fun fetchItemDetail(itemId: Int) {
         viewModelScope.launch {
             _detailState.value = ItemDetailStatusUIState.Loading
@@ -111,6 +112,27 @@ class ItemViewModel(
         }
     }
 
+    // [BARU] Fungsi: Mengambil List Wallet untuk Dropdown
+    fun fetchWalletsForDropdown() {
+        viewModelScope.launch {
+            try {
+                val call = walletRepository.getAllWallets()
+                call.enqueue(object : Callback<GetAllWalletsResponse> {
+                    override fun onResponse(call: Call<GetAllWalletsResponse>, res: Response<GetAllWalletsResponse>) {
+                        if (res.isSuccessful) {
+                            _walletDropdownState.value = res.body()?.data ?: emptyList()
+                        }
+                    }
+                    override fun onFailure(call: Call<GetAllWalletsResponse>, t: Throwable) {
+                        // Silent fail (tidak perlu update UI error khusus dropdown)
+                    }
+                })
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
 
     // ----------------------------------------------------------------
     // 3. WRITE OPERATIONS (CREATE, UPDATE, DELETE)
@@ -120,7 +142,6 @@ class ItemViewModel(
         viewModelScope.launch {
             _mutationState.value = ItemMutationStatusUIState.Loading
             try {
-                // Membuat Request Body
                 val req = ItemCreateRequest(name, amount, type, bookId, walletId, categoryId)
                 val call = itemRepository.createItem(req)
 
@@ -128,8 +149,8 @@ class ItemViewModel(
                     override fun onResponse(call: Call<PostItemResponse>, res: Response<PostItemResponse>) {
                         if (res.isSuccessful) {
                             _mutationState.value = ItemMutationStatusUIState.Success("Transaksi berhasil disimpan")
-                            // Refresh List (Agar data baru muncul)
-                            fetchItemsByBook(bookId)
+                            fetchItemsByBook(bookId) // Refresh List Item
+                            fetchWalletsForDropdown() // Refresh Saldo Wallet (Opsional tapi bagus)
                         } else {
                             val errorMsg = try {
                                 val errorObj = Gson().fromJson(res.errorBody()?.charStream(), ErrorModel::class.java)
@@ -159,8 +180,8 @@ class ItemViewModel(
                     override fun onResponse(call: Call<PostItemResponse>, res: Response<PostItemResponse>) {
                         if (res.isSuccessful) {
                             _mutationState.value = ItemMutationStatusUIState.Success("Transaksi berhasil diupdate")
-                            // Refresh List
                             fetchItemsByBook(bookId)
+                            fetchWalletsForDropdown() // Refresh Saldo
                         } else {
                             _mutationState.value = ItemMutationStatusUIState.Failed("Gagal update data")
                         }
@@ -184,7 +205,6 @@ class ItemViewModel(
                     override fun onResponse(call: Call<DeleteItemResponse>, res: Response<DeleteItemResponse>) {
                         if (res.isSuccessful) {
                             _mutationState.value = ItemMutationStatusUIState.Success("Transaksi berhasil dihapus")
-                            // Refresh List
                             fetchItemsByBook(bookId)
                         } else {
                             _mutationState.value = ItemMutationStatusUIState.Failed("Gagal menghapus data")
@@ -201,19 +221,25 @@ class ItemViewModel(
     }
 
     fun resetMutationState() {
-        _mutationState.value = ItemMutationStatusUIState.Success("")
+        _mutationState.value = ItemMutationStatusUIState.Start
     }
 
     // ----------------------------------------------------------------
-    // 4. FACTORY (Menggunakan BubuApplication)
+    // 4. FACTORY (UPDATED)
     // ----------------------------------------------------------------
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                // CAST KE BubuApplication (Sesuai kode kamu)
                 val application = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as BubuApplication)
+
+                // [BARU] Ambil dua repository
                 val itemRepository = application.container.itemRepository
-                ItemViewModel(itemRepository = itemRepository)
+                val walletRepository = application.container.walletRepository // Pastikan Container punya ini
+
+                ItemViewModel(
+                    itemRepository = itemRepository,
+                    walletRepository = walletRepository
+                )
             }
         }
     }

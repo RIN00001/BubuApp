@@ -32,32 +32,36 @@ import com.example.todolistapp.views.components.item.SwipeableItemCard
 
 // ==========================================
 // VIEW: ITEM LIST (TRANSAKSI)
-// Fitur: List, Add (Dialog), Edit (Dialog), Delete (Dialog)
+// Fitur: List, Add (Dialog + Wallet), Edit (Dialog + Wallet), Delete (Dialog)
 // ==========================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemsList(
     navController: NavHostController,
-    bookId: Int, // ID Buku wajib dikirim agar tahu ini transaksi buku mana
+    bookId: Int,
     itemViewModel: ItemViewModel = viewModel(factory = ItemViewModel.Factory)
 ) {
-    // State Data
+    // 1. State Data Transaksi
     val listState by itemViewModel.listState.collectAsState()
     val mutationState by itemViewModel.mutationState.collectAsState()
 
-    // State Dialogs
+    // 2. [BARU] State Data Wallet untuk Dropdown
+    val walletList by itemViewModel.walletDropdownState.collectAsState()
+
+    // 3. State Dialogs
     var showAddDialog by remember { mutableStateOf(false) }
     var itemToEdit by remember { mutableStateOf<ItemModel?>(null) }
     var itemToDelete by remember { mutableStateOf<ItemModel?>(null) }
 
     val context = LocalContext.current
 
-    // 1. Fetch data saat halaman dibuka
+    // 4. Fetch Data (Items & Wallets) saat halaman dibuka
     LaunchedEffect(bookId) {
         itemViewModel.fetchItemsByBook(bookId)
+        itemViewModel.fetchWalletsForDropdown() // [BARU] Ambil data wallet
     }
 
-    // 2. Handle Feedback (Sukses/Gagal Simpan)
+    // 5. Handle Feedback (Sukses/Gagal Simpan)
     LaunchedEffect(mutationState) {
         when(val state = mutationState) {
             is ItemMutationStatusUIState.Success -> {
@@ -65,6 +69,7 @@ fun ItemsList(
                 itemViewModel.resetMutationState()
                 // Refresh data otomatis setelah mutasi sukses
                 itemViewModel.fetchItemsByBook(bookId)
+                itemViewModel.fetchWalletsForDropdown() // Refresh wallet juga (biar saldo update)
             }
             is ItemMutationStatusUIState.Failed -> {
                 Toast.makeText(context, state.error, Toast.LENGTH_SHORT).show()
@@ -94,7 +99,7 @@ fun ItemsList(
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color(0xFF9B8FC7) // Samakan tema dengan Buku
+                    containerColor = Color(0xFF9B8FC7)
                 )
             )
         },
@@ -149,11 +154,7 @@ fun ItemsList(
                             items(items) { item ->
                                 SwipeableItemCard(
                                     item = item,
-                                    onClick = {
-                                        // Kalau mau ada detail khusus per item, navigate di sini
-                                        // Tapi biasanya edit saja sudah cukup
-                                        itemToEdit = item
-                                    },
+                                    onClick = { itemToEdit = item },
                                     onEdit = { itemToEdit = item },
                                     onDelete = { itemToDelete = item }
                                 )
@@ -176,7 +177,7 @@ fun ItemsList(
         }
 
         // ==========================================
-        // DIALOG SECTIONS (Pop-ups)
+        // DIALOG SECTIONS
         // ==========================================
 
         // 1. Dialog Tambah
@@ -187,10 +188,10 @@ fun ItemsList(
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     _ItemAddForm(
-                        onSubmit = { name, amount, type ->
-                            // Panggil ViewModel Create
-                            // walletId & categoryId null dulu jika belum ada fitur pilih dompet/kategori
-                            itemViewModel.createItem(name, amount, type, bookId, null, null)
+                        wallets = walletList, // [BARU] Kirim list wallet ke form
+                        onSubmit = { name, amount, type, walletId ->
+                            // [BARU] Terima walletId dan kirim ke ViewModel
+                            itemViewModel.createItem(name, amount, type, bookId, walletId, null)
                             showAddDialog = false
                         }
                     )
@@ -202,10 +203,11 @@ fun ItemsList(
         itemToEdit?.let { item ->
             _ItemEditForm(
                 item = item,
-                onSubmit = { name, amount, type ->
-                    // Panggil ViewModel Update
+                wallets = walletList, // [BARU] Kirim list wallet ke form edit
+                onSubmit = { name, amount, type, walletId ->
+                    // [BARU] Terima walletId update
                     itemViewModel.updateItem(
-                        item.id, name, amount, type, bookId, item.walletId, item.categoryId
+                        item.id, name, amount, type, bookId, walletId, item.categoryId
                     )
                     itemToEdit = null
                 },
