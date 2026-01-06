@@ -36,11 +36,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.example.bubuapp.views.components.NavigationBar
 import com.example.todolistapp.enums.PagesEnum
 import com.example.todolistapp.uiStates.AuthenticationStatusUIState
@@ -100,7 +98,7 @@ fun AppNavigation(
         }
 
         // ==========================================
-        // 2. BOOK FLOW
+        // 2. BOOK FLOW (Main & Transaksi ada di sini)
         // ==========================================
         composable(PagesEnum.Books.name) {
             BookMainView(navController)
@@ -120,21 +118,7 @@ fun AppNavigation(
             }
         }
 
-        // ==========================================
-        // 3. ITEM FLOW (TRANSAKSI)
-        // ==========================================
-        composable(
-            route = "ItemsList/{bookId}",
-            arguments = listOf(
-                navArgument("bookId") { type = NavType.IntType }
-            )
-        ) { backStackEntry ->
-            val bookId = backStackEntry.arguments?.getInt("bookId") ?: 0
-            ItemsList(
-                navController = navController,
-                bookId = bookId
-            )
-        }
+        // BAGIAN ITEMSLIST SUDAH DIHAPUS
 
         // ==========================================
         // 4. WALLET FLOW
