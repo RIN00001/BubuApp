@@ -25,32 +25,48 @@ class CategoryViewModel(
 ) : ViewModel() {
 
     // --- State UI ---
-    // Menggunakan State Compose agar UI otomatis update
     var categories by mutableStateOf<List<CategoryModel>>(emptyList())
         private set
 
     var isLoading by mutableStateOf(false)
         private set
 
-    // Tab Aktif (Default: EXPENSE)
     var currentTab by mutableStateOf("EXPENSE")
         private set
+
+    // --- DAFTAR DEFAULT (Nama, IconKey) ---
+    private val defaultExpenses = listOf(
+        Pair("Makanan & Minuman", "food"),
+        Pair("Transportasi", "transport"),
+        Pair("Belanja", "shopping"),
+        Pair("Tagihan", "bill"),
+        Pair("Hiburan", "entertainment"),
+        Pair("Kesehatan", "health"),
+        Pair("Pendidikan", "education"),
+        Pair("Cicilan", "installment"),
+        Pair("Lain-lain", "other")
+    )
+
+    private val defaultIncomes = listOf(
+        Pair("Gaji", "salary"),
+        Pair("Bonus", "bonus"),
+        Pair("Investasi", "investment")
+    )
 
     init {
         loadCategories()
     }
 
-    // 1. Ganti Tab (Dipanggil saat user klik Tab Pemasukan/Pengeluaran)
+    // 1. Ganti Tab
     fun onTabSelected(type: String) {
         currentTab = type
         loadCategories()
     }
 
-    // 2. Load Data (MENGGUNAKAN ENQUEUE)
+    // 2. Load Data (+ Logic Auto Seed)
     fun loadCategories() {
         isLoading = true
 
-        // Panggil Repository (yang sekarang mengembalikan Call)
         val call = categoryRepository.getAllCategories(currentTab)
 
         call.enqueue(object : Callback<GetAllCategoriesResponse> {
@@ -58,12 +74,21 @@ class CategoryViewModel(
                 call: Call<GetAllCategoriesResponse>,
                 response: Response<GetAllCategoriesResponse>
             ) {
-                isLoading = false
                 if (response.isSuccessful) {
                     val allData = response.body()?.data ?: emptyList()
-                    // Filter lagi untuk memastikan tipe sesuai tab
-                    categories = allData.filter { it.type == currentTab }
+                    val filteredData = allData.filter { it.type == currentTab }
+
+                    categories = filteredData
+
+                    // JIKA DATA KOSONG -> JALANKAN SEEDING
+                    if (filteredData.isEmpty()) {
+                        Log.d("CAT_VM", "Data kosong untuk $currentTab, mulai seeding...")
+                        seedCategories(currentTab)
+                    } else {
+                        isLoading = false
+                    }
                 } else {
+                    isLoading = false
                     Log.e("CAT_VM", "Gagal load: ${response.code()}")
                 }
             }
@@ -75,30 +100,74 @@ class CategoryViewModel(
         })
     }
 
-    // 3. Create Data (MENGGUNAKAN ENQUEUE)
-    fun addCategory(context: Context, name: String, icon: String = "default") {
+    // --- LOGIC AUTO SEED ---
+    private fun seedCategories(type: String) {
+        val listToSeed = if (type == "EXPENSE") defaultExpenses else defaultIncomes
+        var successCount = 0
+        var completedCount = 0
+
+        listToSeed.forEach { (name, iconKey) ->
+            // Kirim iconKey ke API
+            val call = categoryRepository.createCategory(name, type, iconKey)
+
+            call.enqueue(object : Callback<CategoryActionResponse> {
+                override fun onResponse(call: Call<CategoryActionResponse>, response: Response<CategoryActionResponse>) {
+                    completedCount++
+                    if (response.isSuccessful) successCount++
+                    checkSeedingComplete(completedCount, listToSeed.size)
+                }
+
+                override fun onFailure(call: Call<CategoryActionResponse>, t: Throwable) {
+                    completedCount++
+                    checkSeedingComplete(completedCount, listToSeed.size)
+                }
+            })
+        }
+    }
+
+    private fun checkSeedingComplete(completed: Int, total: Int) {
+        if (completed == total) {
+            // Setelah seeding selesai, load ulang agar muncul di list
+            reloadAfterSeed()
+        }
+    }
+
+    private fun reloadAfterSeed() {
+        val call = categoryRepository.getAllCategories(currentTab)
+        call.enqueue(object : Callback<GetAllCategoriesResponse> {
+            override fun onResponse(call: Call<GetAllCategoriesResponse>, response: Response<GetAllCategoriesResponse>) {
+                isLoading = false
+                if (response.isSuccessful) {
+                    val allData = response.body()?.data ?: emptyList()
+                    categories = allData.filter { it.type == currentTab }
+                }
+            }
+            override fun onFailure(call: Call<GetAllCategoriesResponse>, t: Throwable) {
+                isLoading = false
+            }
+        })
+    }
+
+    // 3. Create Manual (Dari User)
+    fun addCategory(context: Context, name: String) {
         if (name.isBlank()) {
             Toast.makeText(context, "Nama kategori wajib diisi", Toast.LENGTH_SHORT).show()
             return
         }
-
         isLoading = true
-        val call = categoryRepository.createCategory(name, currentTab, icon)
+        // Default icon untuk buatan user manual adalah 'other'
+        val call = categoryRepository.createCategory(name, currentTab, "other")
 
         call.enqueue(object : Callback<CategoryActionResponse> {
-            override fun onResponse(
-                call: Call<CategoryActionResponse>,
-                response: Response<CategoryActionResponse>
-            ) {
+            override fun onResponse(call: Call<CategoryActionResponse>, response: Response<CategoryActionResponse>) {
                 isLoading = false
                 if (response.isSuccessful) {
-                    Toast.makeText(context, "Kategori berhasil dibuat!", Toast.LENGTH_SHORT).show()
-                    loadCategories() // Refresh list otomatis
+                    Toast.makeText(context, "Kategori dibuat", Toast.LENGTH_SHORT).show()
+                    loadCategories()
                 } else {
-                    Toast.makeText(context, "Gagal membuat kategori", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Gagal membuat", Toast.LENGTH_SHORT).show()
                 }
             }
-
             override fun onFailure(call: Call<CategoryActionResponse>, t: Throwable) {
                 isLoading = false
                 Toast.makeText(context, "Error: ${t.localizedMessage}", Toast.LENGTH_SHORT).show()
@@ -106,71 +175,50 @@ class CategoryViewModel(
         })
     }
 
-    // 4. Update Data (MENGGUNAKAN ENQUEUE)
-    fun updateCategory(context: Context, id: Int, name: String, icon: String = "default") {
-        if (name.isBlank()) {
-            Toast.makeText(context, "Nama kategori wajib diisi", Toast.LENGTH_SHORT).show()
-            return
-        }
-
+    // 4. Update
+    fun updateCategory(context: Context, id: Int, name: String, icon: String) {
+        if (name.isBlank()) return
         isLoading = true
         val call = categoryRepository.updateCategory(id, name, currentTab, icon)
 
         call.enqueue(object : Callback<CategoryActionResponse> {
-            override fun onResponse(
-                call: Call<CategoryActionResponse>,
-                response: Response<CategoryActionResponse>
-            ) {
+            override fun onResponse(call: Call<CategoryActionResponse>, response: Response<CategoryActionResponse>) {
                 isLoading = false
                 if (response.isSuccessful) {
-                    Toast.makeText(context, "Berhasil diupdate!", Toast.LENGTH_SHORT).show()
-                    loadCategories() // Refresh list
-                } else {
-                    Toast.makeText(context, "Gagal update", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Berhasil update", Toast.LENGTH_SHORT).show()
+                    loadCategories()
                 }
             }
-
             override fun onFailure(call: Call<CategoryActionResponse>, t: Throwable) {
                 isLoading = false
-                Toast.makeText(context, "Error: ${t.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
         })
     }
 
-    // 5. Delete Data (MENGGUNAKAN ENQUEUE)
+    // 5. Delete
     fun deleteCategory(context: Context, categoryId: Int) {
         isLoading = true
         val call = categoryRepository.deleteCategory(categoryId)
 
         call.enqueue(object : Callback<CategoryActionResponse> {
-            override fun onResponse(
-                call: Call<CategoryActionResponse>,
-                response: Response<CategoryActionResponse>
-            ) {
+            override fun onResponse(call: Call<CategoryActionResponse>, response: Response<CategoryActionResponse>) {
                 isLoading = false
                 if (response.isSuccessful) {
-                    Toast.makeText(context, "Kategori dihapus", Toast.LENGTH_SHORT).show()
-                    loadCategories() // Refresh list
-                } else {
-                    Toast.makeText(context, "Gagal menghapus", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Terhapus", Toast.LENGTH_SHORT).show()
+                    loadCategories()
                 }
             }
-
             override fun onFailure(call: Call<CategoryActionResponse>, t: Throwable) {
                 isLoading = false
-                Toast.makeText(context, "Error: ${t.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
         })
     }
 
-    // --- FACTORY ---
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = (this[APPLICATION_KEY] as BubuApplication)
-                CategoryViewModel(
-                    categoryRepository = app.container.categoryRepository
-                )
+                CategoryViewModel(app.container.categoryRepository)
             }
         }
     }
