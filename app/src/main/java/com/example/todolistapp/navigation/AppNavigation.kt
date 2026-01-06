@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
@@ -30,8 +32,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -278,9 +282,9 @@ fun SavingListView(navController: NavHostController) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Daftar Tabungan") },
+                title = { Text("Daftar Tabungan", color = Color.White) },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = Color(0xFF9C27B0)
                 )
             )
         },
@@ -352,9 +356,9 @@ fun SavingListViewWithNavBar(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Daftar Tabungan") },
+                title = { Text("Daftar Tabungan", color = Color.White) },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = Color(0xFFAD88C6)
                 )
             )
         },
@@ -430,7 +434,14 @@ fun SavingListViewWithNavBar(
                                     navController = navController,
                                     savingListFormViewModel = savingFormViewModel,
                                     onDelete = { savingId ->
-                                        // Implement delete function if needed
+                                        if (token.isNotEmpty()) {
+                                            savingFormViewModel.deleteSaving(
+                                                token = token,
+                                                userId = 1,
+                                                savingId = savingId,
+                                                navController = navController
+                                            )
+                                        }
                                     }
                                 )
                             }

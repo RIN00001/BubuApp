@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
@@ -26,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.todolistapp.R
 import com.example.todolistapp.models.SavingModel
 import com.example.todolistapp.uiStates.SavingDetailDataStatusUIState
+import com.example.todolistapp.utils.formatRupiah
 import com.example.todolistapp.viewModels.SavingDetailViewModel
 import com.example.todolistapp.viewModels.SavingListFormViewModel
 import com.example.todolistapp.views.templates.CircleLoadingTemplate
@@ -67,13 +69,13 @@ fun SavingListDetailView(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(Color(0xFFFAFAFA))
             .padding(16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 20.dp),
+                .padding(bottom = 24.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -81,20 +83,26 @@ fun SavingListDetailView(
                 onClick = {
                     navController.popBackStack()
                 },
-                modifier = Modifier.size(45.dp),
-                colors = ButtonDefaults.buttonColors(Color.LightGray),
-                contentPadding = PaddingValues(0.dp)
+                modifier = Modifier
+                    .size(48.dp)
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(12.dp)
+                    ),
+                colors = ButtonDefaults.buttonColors(Color.White),
+                contentPadding = PaddingValues(0.dp),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_back),
                     contentDescription = null,
                     colorFilter = ColorFilter.tint(Color.Black),
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
             Text(
-                text = "Saving Details",
+                text = "Detail Tabungan",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
@@ -104,15 +112,21 @@ fun SavingListDetailView(
                 onClick = {
                     savingDetailViewModel.deleteSaving(token, userId, savingId, navController)
                 },
-                modifier = Modifier.size(45.dp),
-                colors = ButtonDefaults.buttonColors(Color.Red),
-                contentPadding = PaddingValues(0.dp)
+                modifier = Modifier
+                    .size(48.dp)
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(12.dp)
+                    ),
+                colors = ButtonDefaults.buttonColors(Color(0xFFE53935)),
+                contentPadding = PaddingValues(0.dp),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_delete),
                     contentDescription = null,
                     colorFilter = ColorFilter.tint(Color.White),
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
@@ -125,52 +139,81 @@ fun SavingListDetailView(
                     null
                 }
                 if (saving != null) {
+                    val progressPercentage = if (saving.targetamount > 0) {
+                        (saving.amount / saving.targetamount * 100).toInt().coerceIn(0, 100)
+                    } else {
+                        0
+                    }
+
+                    val isCompleted = progressPercentage >= 100
+
+                    val cardColor = when {
+                        isCompleted -> Color(0xFFE8F5E9)
+                        progressPercentage >= 75 -> Color(0xFFFFF3E0)
+                        progressPercentage >= 50 -> Color(0xFFE3F2FD)
+                        else -> Color(0xFFF3E5F5)
+                    }
+
+                    val progressColor = when {
+                        isCompleted -> Color(0xFF4CAF50)
+                        progressPercentage >= 75 -> Color(0xFFFF9800)
+                        progressPercentage >= 50 -> Color(0xFF2196F3)
+                        else -> Color(0xFF9C27B0)
+                    }
+
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 16.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = CardDefaults.cardColors(Color.White),
-                        elevation = CardDefaults.cardElevation(4.dp)
+                            .padding(bottom = 24.dp)
+                            .shadow(
+                                elevation = 8.dp,
+                                shape = RoundedCornerShape(16.dp)
+                            ),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(cardColor),
+                        elevation = CardDefaults.cardElevation(0.dp)
                     ) {
                         Column(
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(24.dp)
                         ) {
                             Text(
                                 text = saving.name,
-                                fontSize = 22.sp,
+                                fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-
-                            Text(
-                                text = "Goal Date: ${saving.goalDate}",
-                                fontSize = 14.sp,
-                                color = Color.Gray,
                                 modifier = Modifier.padding(bottom = 12.dp)
                             )
 
-                            HorizontalDivider(
-                                modifier = Modifier.padding(vertical = 8.dp),
-                                color = Color.LightGray
+                            if (saving.goalDate.isNotEmpty()) {
+                                Text(
+                                    text = "Tanggal Target: ${saving.goalDate}",
+                                    fontSize = 14.sp,
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(bottom = 20.dp)
+                                )
+                            }
+
+                            Divider(
+                                modifier = Modifier.padding(vertical = 12.dp),
+                                color = Color.Black.copy(alpha = 0.1f)
                             )
 
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
+                                    .padding(vertical = 12.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column {
                                     Text(
-                                        text = "Target Amount",
-                                        fontSize = 12.sp,
-                                        color = Color.Gray
+                                        text = "Target",
+                                        fontSize = 13.sp,
+                                        color = Color.Gray,
+                                        fontWeight = FontWeight.Medium
                                     )
                                     Text(
-                                        text = "$${saving.targetamount}",
-                                        fontSize = 18.sp,
+                                        text = formatRupiah(saving.targetamount),
+                                        fontSize = 22.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.Black
                                     )
@@ -180,42 +223,62 @@ fun SavingListDetailView(
                                     horizontalAlignment = Alignment.End
                                 ) {
                                     Text(
-                                        text = "Current Amount",
-                                        fontSize = 12.sp,
-                                        color = Color.Gray
+                                        text = "Terkumpul",
+                                        fontSize = 13.sp,
+                                        color = Color.Gray,
+                                        fontWeight = FontWeight.Medium
                                     )
                                     Text(
-                                        text = "$${saving.amount}",
-                                        fontSize = 18.sp,
+                                        text = formatRupiah(saving.amount),
+                                        fontSize = 22.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.Black
+                                        color = progressColor
                                     )
                                 }
                             }
 
-                            HorizontalDivider(
-                                modifier = Modifier.padding(vertical = 8.dp),
-                                color = Color.LightGray
+                            Divider(
+                                modifier = Modifier.padding(vertical = 12.dp),
+                                color = Color.Black.copy(alpha = 0.1f)
                             )
 
                             val progress = (saving.amount / saving.targetamount).coerceIn(0.0, 1.0).toFloat()
 
                             Text(
                                 text = "Progress: ${String.format(Locale.getDefault(), "%.1f", progress * 100)}%",
-                                fontSize = 12.sp,
+                                fontSize = 13.sp,
                                 color = Color.Gray,
-                                modifier = Modifier.padding(vertical = 8.dp)
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(vertical = 12.dp)
                             )
 
                             LinearProgressIndicator(
                                 progress = { progress },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(8.dp)
-                                    .clip(RoundedCornerShape(4.dp)),
-                                color = Color.Blue,
-                                trackColor = Color.LightGray
+                                    .height(12.dp)
+                                    .clip(RoundedCornerShape(6.dp)),
+                                color = progressColor,
+                                trackColor = Color.White.copy(alpha = 0.5f)
                             )
+
+                            if (isCompleted) {
+                                Surface(
+                                    modifier = Modifier
+                                        .padding(top = 16.dp)
+                                        .align(Alignment.CenterHorizontally)
+                                        .clip(RoundedCornerShape(10.dp)),
+                                    color = Color(0xFF4CAF50).copy(alpha = 0.2f)
+                                ) {
+                                    Text(
+                                        text = "✓ Target Tercapai!",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF2E7D32),
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -225,12 +288,16 @@ fun SavingListDetailView(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(Color.Blue),
-                        shape = RoundedCornerShape(8.dp)
+                            .height(56.dp)
+                            .shadow(
+                                elevation = 6.dp,
+                                shape = RoundedCornerShape(12.dp)
+                            ),
+                        colors = ButtonDefaults.buttonColors(Color(0xFF2196F3)),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "Edit Saving",
+                            text = "Edit Tabungan",
                             fontSize = 16.sp,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
@@ -261,7 +328,7 @@ fun SavingListDetailView(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Failed to load saving details!",
+                        text = "Gagal memuat detail tabungan!",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Red

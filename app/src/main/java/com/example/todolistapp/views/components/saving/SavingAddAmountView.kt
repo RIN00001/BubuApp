@@ -2,12 +2,24 @@ package com.example.todolistapp.views
 
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,8 +27,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -26,6 +43,7 @@ import com.example.todolistapp.R
 import com.example.todolistapp.enums.PagesEnum
 import com.example.todolistapp.models.SavingModel
 import com.example.todolistapp.uiStates.StringDataStatusUIState
+import com.example.todolistapp.utils.formatRupiah
 import com.example.todolistapp.viewModels.HomeViewModel
 import com.example.todolistapp.viewModels.SavingListFormViewModel
 import com.example.todolistapp.viewModels.SharedDataViewModel
@@ -72,66 +90,190 @@ fun SavingAddAmountView(
     }
 
     Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.SpaceBetween
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color(0xFFFAFAFA))
+            .padding(16.dp)
     ) {
-        Column {
-            Text(
-                text = "Add Amount",
-                fontSize = 35.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 15.dp)
+        // Header dengan Back Button
+        Button(
+            onClick = {
+                navController.popBackStack()
+            },
+            modifier = Modifier
+                .size(48.dp)
+                .shadow(
+                    elevation = 4.dp,
+                    shape = RoundedCornerShape(12.dp)
+                ),
+            colors = ButtonDefaults.buttonColors(Color.White),
+            contentPadding = PaddingValues(0.dp),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_back),
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(Color.Black),
+                modifier = Modifier.size(22.dp)
             )
+        }
 
+        // Title
+        Text(
+            text = "Tambah Jumlah",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+            modifier = Modifier.padding(top = 24.dp, bottom = 24.dp)
+        )
+
+        // Content - Scrollable
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Saving Info Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp)
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(16.dp)
+                    ),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(Color(0xFFF3E5F5)),
+                elevation = CardDefaults.cardElevation(0.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp)
+                ) {
+                    Text(
+                        text = savingModel.name,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    Divider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = Color.Black.copy(alpha = 0.1f)
+                    )
+
+                    // Current Amount
+                    Column(
+                        modifier = Modifier.padding(vertical = 12.dp)
+                    ) {
+                        Text(
+                            text = "Jumlah Saat Ini",
+                            fontSize = 13.sp,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = formatRupiah(savingModel.amount),
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF9C27B0)
+                        )
+                    }
+
+                    // Target Amount
+                    Column(
+                        modifier = Modifier.padding(vertical = 12.dp)
+                    ) {
+                        Text(
+                            text = "Target Jumlah",
+                            fontSize = 13.sp,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = formatRupiah(savingModel.targetamount),
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4CAF50)
+                        )
+                    }
+
+                    Divider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = Color.Black.copy(alpha = 0.1f)
+                    )
+
+                    // Progress
+                    val progressPercentage = if (savingModel.targetamount > 0) {
+                        (savingModel.amount / savingModel.targetamount * 100).toInt().coerceIn(0, 100)
+                    } else {
+                        0
+                    }
+
+                    Text(
+                        text = "Progress: $progressPercentage%",
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            // Amount Input Section
             Text(
-                text = "Saving: ${savingModel.name}",
-                fontSize = 18.sp,
+                text = "Jumlah yang Ditambahkan",
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFF00796B),
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            Text(
-                text = "Current Amount: $${savingModel.amount}",
-                fontSize = 16.sp,
-                color = Color(0xFF004D40),
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-
-            Text(
-                text = "Target Amount: $${savingModel.targetamount}",
-                fontSize = 16.sp,
-                color = Color(0xFF004D40),
-                modifier = Modifier.padding(bottom = 16.dp)
+                color = Color(0xFF424242),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
             )
 
             SavingTextField(
                 inputValue = amountToAdd,
                 onValueChange = { amountToAdd = it },
-                modifier = Modifier.fillMaxWidth(),
-                labelText = "Amount to Add",
-                placeholderText = "Enter amount to add",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp),
+                labelText = "Jumlah",
+                placeholderText = "Contoh: 500000",
                 minLine = 1,
                 maxLine = 1
             )
         }
 
-        Column {
+        // Buttons Section
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Button(
                 onClick = {
                     navController.popBackStack()
                 },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(Color.Gray)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(12.dp)
+                    ),
+                colors = ButtonDefaults.buttonColors(Color(0xFFE0E0E0)),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text(text = stringResource(R.string.cancel_text))
+                Text(
+                    text = stringResource(R.string.cancel_text),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF424242)
+                )
             }
 
             when (submissionStatus) {
                 is StringDataStatusUIState.Loading -> CircleLoadingTemplate(
-                    color = Color.Blue,
+                    color = Color(0xFFAD88C6),
                     trackColor = Color.Transparent,
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier.padding(top = 12.dp)
                 )
                 else -> Button(
                     onClick = {
@@ -148,13 +290,27 @@ fun SavingAddAmountView(
                             )
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .padding(top = 12.dp)
+                        .shadow(
+                            elevation = 6.dp,
+                            shape = RoundedCornerShape(12.dp)
+                        ),
                     enabled = isFormValid,
                     colors = ButtonDefaults.buttonColors(
-                        if (isFormValid) Color.Blue else Color.LightGray
-                    )
+                        containerColor = if (isFormValid) Color(0xFFAD88C6) else Color(0xFFE0E0E0),
+                        disabledContainerColor = Color(0xFFE0E0E0)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text(text = "Add Amount")
+                    Text(
+                        text = "Tambah Jumlah",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isFormValid) Color.White else Color(0xFF999999)
+                    )
                 }
             }
         }
