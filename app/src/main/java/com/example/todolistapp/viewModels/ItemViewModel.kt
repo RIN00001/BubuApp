@@ -7,8 +7,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.todolistapp.BubuApplication
 import com.example.todolistapp.models.*
+import com.example.todolistapp.repositories.CategoryRepositoryInterface
 import com.example.todolistapp.repositories.ItemRepositoryInterface
-import com.example.todolistapp.repositories.WalletRepositoryInterface // [PENTING]
+import com.example.todolistapp.repositories.WalletRepositoryInterface
 import com.example.todolistapp.uiStates.ItemDetailStatusUIState
 import com.example.todolistapp.uiStates.ItemListStatusUIState
 import com.example.todolistapp.uiStates.ItemMutationStatusUIState
@@ -27,35 +28,29 @@ import java.util.Locale
 
 class ItemViewModel(
     private val itemRepository: ItemRepositoryInterface,
-    private val walletRepository: WalletRepositoryInterface // [BARU] Tambahkan Repo Wallet
+    private val walletRepository: WalletRepositoryInterface,
+    private val categoryRepository: CategoryRepositoryInterface
 ) : ViewModel() {
 
-    // ----------------------------------------------------------------
-    // 1. STATE MANAGEMENT
-    // ----------------------------------------------------------------
-
-    // State untuk List Data (Dashboard)
+    // --- STATES ---
     private val _listState = MutableStateFlow<ItemListStatusUIState>(ItemListStatusUIState.Start)
     val listState: StateFlow<ItemListStatusUIState> = _listState.asStateFlow()
 
-    // State untuk Detail Data (Form Edit)
     private val _detailState = MutableStateFlow<ItemDetailStatusUIState>(ItemDetailStatusUIState.Start)
     val detailState: StateFlow<ItemDetailStatusUIState> = _detailState.asStateFlow()
 
-    // State untuk Proses Loading/Success/Error saat Create/Update/Delete
     private val _mutationState = MutableStateFlow<ItemMutationStatusUIState>(ItemMutationStatusUIState.Start)
     val mutationState: StateFlow<ItemMutationStatusUIState> = _mutationState.asStateFlow()
 
-    // [BARU] State Khusus Dropdown Wallet
     private val _walletDropdownState = MutableStateFlow<List<WalletModel>>(emptyList())
     val walletDropdownState: StateFlow<List<WalletModel>> = _walletDropdownState.asStateFlow()
 
+    private val _categoryDropdownState = MutableStateFlow<List<CategoryModel>>(emptyList())
+    val categoryDropdownState: StateFlow<List<CategoryModel>> = _categoryDropdownState.asStateFlow()
 
-    // ----------------------------------------------------------------
-    // 2. READ OPERATIONS (GET)
-    // ----------------------------------------------------------------
 
-    // Fungsi Utama: Mengambil data transaksi per buku
+    // --- FUNGSI GET (Menggunakan Enqueue) ---
+
     fun fetchItemsByBook(bookId: Int) {
         viewModelScope.launch {
             _listState.value = ItemListStatusUIState.Loading
@@ -63,6 +58,7 @@ class ItemViewModel(
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 val todayDate = dateFormat.format(Date())
 
+                // Pastikan itemRepository.getItemsByBook mengembalikan Call<...>
                 val call = itemRepository.getItemsByBook(bookId, todayDate)
 
                 call.enqueue(object : Callback<GetAllItemsResponse> {
@@ -71,52 +67,24 @@ class ItemViewModel(
                             val items = res.body()?.data ?: emptyList()
                             _listState.value = ItemListStatusUIState.Success(items)
                         } else {
-                            val errorMsg = try {
-                                val errorObj = Gson().fromJson(res.errorBody()?.charStream(), ErrorModel::class.java)
-                                errorObj?.errors ?: "Gagal memuat data"
-                            } catch (e: Exception) { res.message() }
-                            _listState.value = ItemListStatusUIState.Failed(errorMsg)
+                            _listState.value = ItemListStatusUIState.Failed("Gagal memuat data")
                         }
                     }
                     override fun onFailure(call: Call<GetAllItemsResponse>, t: Throwable) {
                         _listState.value = ItemListStatusUIState.Failed(t.localizedMessage ?: "Connection error")
                     }
                 })
-            } catch (ex: IOException) {
-                _listState.value = ItemListStatusUIState.Failed(ex.localizedMessage ?: "IO Exception")
+            } catch (ex: Exception) {
+                _listState.value = ItemListStatusUIState.Failed(ex.localizedMessage ?: "Error")
             }
         }
     }
 
-    // Fungsi: Mengambil detail 1 item
-    fun fetchItemDetail(itemId: Int) {
-        viewModelScope.launch {
-            _detailState.value = ItemDetailStatusUIState.Loading
-            try {
-                val call = itemRepository.getItemById(itemId)
-                call.enqueue(object : Callback<GetItemResponse> {
-                    override fun onResponse(call: Call<GetItemResponse>, res: Response<GetItemResponse>) {
-                        if (res.isSuccessful) {
-                            _detailState.value = ItemDetailStatusUIState.Success(res.body()!!.data)
-                        } else {
-                            _detailState.value = ItemDetailStatusUIState.Failed("Gagal mengambil detail")
-                        }
-                    }
-                    override fun onFailure(call: Call<GetItemResponse>, t: Throwable) {
-                        _detailState.value = ItemDetailStatusUIState.Failed(t.localizedMessage ?: "Error")
-                    }
-                })
-            } catch (ex: IOException) {
-                _detailState.value = ItemDetailStatusUIState.Failed(ex.localizedMessage ?: "IO Error")
-            }
-        }
-    }
-
-    // [BARU] Fungsi: Mengambil List Wallet untuk Dropdown
+    // Mengambil Wallet (Dropdown) - MENGGUNAKAN ENQUEUE
     fun fetchWalletsForDropdown() {
         viewModelScope.launch {
             try {
-                val call = walletRepository.getAllWallets()
+                val call = walletRepository.getAllWallets() // Harus return Call
                 call.enqueue(object : Callback<GetAllWalletsResponse> {
                     override fun onResponse(call: Call<GetAllWalletsResponse>, res: Response<GetAllWalletsResponse>) {
                         if (res.isSuccessful) {
@@ -124,7 +92,7 @@ class ItemViewModel(
                         }
                     }
                     override fun onFailure(call: Call<GetAllWalletsResponse>, t: Throwable) {
-                        // Silent fail (tidak perlu update UI error khusus dropdown)
+                        // Silent fail agar UI tidak crash
                     }
                 })
             } catch (e: Exception) {
@@ -133,10 +101,30 @@ class ItemViewModel(
         }
     }
 
+    // Mengambil Category (Dropdown) - MENGGUNAKAN ENQUEUE
+    fun fetchCategoriesForDropdown() {
+        viewModelScope.launch {
+            try {
+                // Sekarang ini VALID karena Repository sudah diganti return Call
+                val call = categoryRepository.getAllCategories()
 
-    // ----------------------------------------------------------------
-    // 3. WRITE OPERATIONS (CREATE, UPDATE, DELETE)
-    // ----------------------------------------------------------------
+                call.enqueue(object : Callback<GetAllCategoriesResponse> {
+                    override fun onResponse(call: Call<GetAllCategoriesResponse>, res: Response<GetAllCategoriesResponse>) {
+                        if (res.isSuccessful) {
+                            _categoryDropdownState.value = res.body()?.data ?: emptyList()
+                        }
+                    }
+                    override fun onFailure(call: Call<GetAllCategoriesResponse>, t: Throwable) {
+                        // Silent fail
+                    }
+                })
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // --- FUNGSI WRITE (Create/Update/Delete) ---
 
     fun createItem(name: String, amount: Double, type: String, bookId: Int, walletId: Int?, categoryId: Int?) {
         viewModelScope.launch {
@@ -148,23 +136,19 @@ class ItemViewModel(
                 call.enqueue(object : Callback<PostItemResponse> {
                     override fun onResponse(call: Call<PostItemResponse>, res: Response<PostItemResponse>) {
                         if (res.isSuccessful) {
-                            _mutationState.value = ItemMutationStatusUIState.Success("Transaksi berhasil disimpan")
-                            fetchItemsByBook(bookId) // Refresh List Item
-                            fetchWalletsForDropdown() // Refresh Saldo Wallet (Opsional tapi bagus)
+                            _mutationState.value = ItemMutationStatusUIState.Success("Berhasil disimpan")
+                            fetchItemsByBook(bookId)
+                            fetchWalletsForDropdown()
                         } else {
-                            val errorMsg = try {
-                                val errorObj = Gson().fromJson(res.errorBody()?.charStream(), ErrorModel::class.java)
-                                errorObj?.errors ?: "Gagal menyimpan"
-                            } catch (e: Exception) { "Error server" }
-                            _mutationState.value = ItemMutationStatusUIState.Failed(errorMsg)
+                            _mutationState.value = ItemMutationStatusUIState.Failed("Gagal menyimpan")
                         }
                     }
                     override fun onFailure(call: Call<PostItemResponse>, t: Throwable) {
-                        _mutationState.value = ItemMutationStatusUIState.Failed(t.localizedMessage ?: "Connection error")
+                        _mutationState.value = ItemMutationStatusUIState.Failed("Error koneksi")
                     }
                 })
-            } catch (ex: IOException) {
-                _mutationState.value = ItemMutationStatusUIState.Failed(ex.localizedMessage ?: "IO Exception")
+            } catch (ex: Exception) {
+                _mutationState.value = ItemMutationStatusUIState.Failed(ex.localizedMessage ?: "Error")
             }
         }
     }
@@ -179,19 +163,19 @@ class ItemViewModel(
                 call.enqueue(object : Callback<PostItemResponse> {
                     override fun onResponse(call: Call<PostItemResponse>, res: Response<PostItemResponse>) {
                         if (res.isSuccessful) {
-                            _mutationState.value = ItemMutationStatusUIState.Success("Transaksi berhasil diupdate")
+                            _mutationState.value = ItemMutationStatusUIState.Success("Berhasil diupdate")
                             fetchItemsByBook(bookId)
-                            fetchWalletsForDropdown() // Refresh Saldo
+                            fetchWalletsForDropdown()
                         } else {
-                            _mutationState.value = ItemMutationStatusUIState.Failed("Gagal update data")
+                            _mutationState.value = ItemMutationStatusUIState.Failed("Gagal update")
                         }
                     }
                     override fun onFailure(call: Call<PostItemResponse>, t: Throwable) {
-                        _mutationState.value = ItemMutationStatusUIState.Failed(t.localizedMessage ?: "Connection error")
+                        _mutationState.value = ItemMutationStatusUIState.Failed("Error koneksi")
                     }
                 })
-            } catch (ex: IOException) {
-                _mutationState.value = ItemMutationStatusUIState.Failed(ex.localizedMessage ?: "IO Exception")
+            } catch (ex: Exception) {
+                _mutationState.value = ItemMutationStatusUIState.Failed(ex.localizedMessage ?: "Error")
             }
         }
     }
@@ -204,18 +188,18 @@ class ItemViewModel(
                 call.enqueue(object : Callback<DeleteItemResponse> {
                     override fun onResponse(call: Call<DeleteItemResponse>, res: Response<DeleteItemResponse>) {
                         if (res.isSuccessful) {
-                            _mutationState.value = ItemMutationStatusUIState.Success("Transaksi berhasil dihapus")
+                            _mutationState.value = ItemMutationStatusUIState.Success("Berhasil dihapus")
                             fetchItemsByBook(bookId)
                         } else {
-                            _mutationState.value = ItemMutationStatusUIState.Failed("Gagal menghapus data")
+                            _mutationState.value = ItemMutationStatusUIState.Failed("Gagal hapus")
                         }
                     }
                     override fun onFailure(call: Call<DeleteItemResponse>, t: Throwable) {
-                        _mutationState.value = ItemMutationStatusUIState.Failed(t.localizedMessage ?: "Connection error")
+                        _mutationState.value = ItemMutationStatusUIState.Failed("Error koneksi")
                     }
                 })
-            } catch (ex: IOException) {
-                _mutationState.value = ItemMutationStatusUIState.Failed(ex.localizedMessage ?: "IO Exception")
+            } catch (ex: Exception) {
+                _mutationState.value = ItemMutationStatusUIState.Failed(ex.localizedMessage ?: "Error")
             }
         }
     }
@@ -224,21 +208,15 @@ class ItemViewModel(
         _mutationState.value = ItemMutationStatusUIState.Start
     }
 
-    // ----------------------------------------------------------------
-    // 4. FACTORY (UPDATED)
-    // ----------------------------------------------------------------
+    // --- FACTORY ---
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as BubuApplication)
-
-                // [BARU] Ambil dua repository
-                val itemRepository = application.container.itemRepository
-                val walletRepository = application.container.walletRepository // Pastikan Container punya ini
-
                 ItemViewModel(
-                    itemRepository = itemRepository,
-                    walletRepository = walletRepository
+                    itemRepository = application.container.itemRepository,
+                    walletRepository = application.container.walletRepository,
+                    categoryRepository = application.container.categoryRepository
                 )
             }
         }

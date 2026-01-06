@@ -11,21 +11,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.example.todolistapp.models.WalletModel // Pastikan import Model Wallet ada
+import com.example.todolistapp.models.CategoryModel
+import com.example.todolistapp.models.WalletModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun _ItemAddForm(
-    wallets: List<WalletModel>, // [BARU] Terima list wallet
-    onSubmit: (name: String, amount: Double, type: String, walletId: Int?) -> Unit // [BARU] Kirim walletId
+    wallets: List<WalletModel>,
+    categories: List<CategoryModel>,
+    onSubmit: (name: String, amount: Double, type: String, walletId: Int?, categoryId: Int?) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf("EXPENSE") }
 
-    // State untuk Dropdown
-    var expanded by remember { mutableStateOf(false) }
+    // State untuk Dropdown Wallet
+    var expandedWallet by remember { mutableStateOf(false) }
     var selectedWallet by remember { mutableStateOf<WalletModel?>(null) }
+
+    // State untuk Dropdown Category
+    var expandedCategory by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf<CategoryModel?>(null) }
 
     Column(
         modifier = Modifier
@@ -56,10 +62,10 @@ fun _ItemAddForm(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 3. [BARU] Dropdown Wallet
+        // 3. Dropdown Wallet
         ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded },
+            expanded = expandedWallet,
+            onExpandedChange = { expandedWallet = !expandedWallet },
             modifier = Modifier.fillMaxWidth()
         ) {
             OutlinedTextField(
@@ -67,20 +73,20 @@ fun _ItemAddForm(
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Wallet") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedWallet) },
                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                 modifier = Modifier
                     .menuAnchor()
                     .fillMaxWidth()
             )
             ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
+                expanded = expandedWallet,
+                onDismissRequest = { expandedWallet = false }
             ) {
                 if (wallets.isEmpty()) {
                     DropdownMenuItem(
                         text = { Text("Tidak ada wallet tersedia") },
-                        onClick = { expanded = false }
+                        onClick = { expandedWallet = false }
                     )
                 } else {
                     wallets.forEach { wallet ->
@@ -93,7 +99,7 @@ fun _ItemAddForm(
                             },
                             onClick = {
                                 selectedWallet = wallet
-                                expanded = false
+                                expandedWallet = false
                             }
                         )
                     }
@@ -111,9 +117,51 @@ fun _ItemAddForm(
             )
         }
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 4. Dropdown Category
+        ExposedDropdownMenuBox(
+            expanded = expandedCategory,
+            onExpandedChange = { expandedCategory = !expandedCategory },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = selectedCategory?.name ?: "Pilih Kategori (Opsional)",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Kategori") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategory) },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = expandedCategory,
+                onDismissRequest = { expandedCategory = false }
+            ) {
+                if (categories.isEmpty()) {
+                    DropdownMenuItem(
+                        text = { Text("Belum ada kategori") },
+                        onClick = { expandedCategory = false }
+                    )
+                } else {
+                    categories.forEach { category ->
+                        DropdownMenuItem(
+                            text = { Text(category.name) },
+                            onClick = {
+                                selectedCategory = category
+                                expandedCategory = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 4. Pilihan Tipe (Income/Expense)
+        // 5. Pilihan Tipe (Income/Expense)
         Row(modifier = Modifier.fillMaxWidth()) {
             listOf("EXPENSE", "INCOME").forEach { type ->
                 Row(
@@ -148,7 +196,7 @@ fun _ItemAddForm(
                 val amountVal = amount.toDoubleOrNull()
                 // Validasi: Nama, Amount, dan Wallet harus terisi
                 if (name.isNotBlank() && amountVal != null && selectedWallet != null) {
-                    onSubmit(name, amountVal, selectedType, selectedWallet!!.id)
+                    onSubmit(name, amountVal, selectedType, selectedWallet!!.id, selectedCategory?.id)
                 }
             },
             modifier = Modifier.fillMaxWidth(),

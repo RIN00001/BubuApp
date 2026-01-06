@@ -4,34 +4,35 @@ import com.example.todolistapp.services.CategoryAPIService
 import com.example.todolistapp.services.CategoryActionResponse
 import com.example.todolistapp.services.CategoryRequest
 import com.example.todolistapp.models.GetAllCategoriesResponse
-import retrofit2.Response
+import retrofit2.Call // Import Call
 
 interface CategoryRepositoryInterface {
-    suspend fun getAllCategories(type: String? = null): Response<GetAllCategoriesResponse>
-    suspend fun createCategory(name: String, type: String, icon: String?): Response<CategoryActionResponse>
-    suspend fun updateCategory(id: Int, name: String, type: String, icon: String?): Response<CategoryActionResponse>
-    suspend fun deleteCategory(categoryId: Int): Response<CategoryActionResponse>
+    // HAPUS suspend, GANTI Response dengan Call
+    fun getAllCategories(type: String? = null): Call<GetAllCategoriesResponse>
+    fun createCategory(name: String, type: String, icon: String?): Call<CategoryActionResponse>
+    fun updateCategory(id: Int, name: String, type: String, icon: String?): Call<CategoryActionResponse>
+    fun deleteCategory(categoryId: Int): Call<CategoryActionResponse>
 }
 
 class CategoryRepository(
     private val categoryAPIService: CategoryAPIService
 ) : CategoryRepositoryInterface {
 
-    override suspend fun getAllCategories(type: String?): Response<GetAllCategoriesResponse> {
+    override fun getAllCategories(type: String?): Call<GetAllCategoriesResponse> {
         return categoryAPIService.getAllCategories(type)
     }
 
-    override suspend fun createCategory(name: String, type: String, icon: String?): Response<CategoryActionResponse> {
+    override fun createCategory(name: String, type: String, icon: String?): Call<CategoryActionResponse> {
         val request = CategoryRequest(name, type, icon)
         return categoryAPIService.createCategory(request)
     }
 
-    override suspend fun updateCategory(id: Int, name: String, type: String, icon: String?): Response<CategoryActionResponse> {
+    override fun updateCategory(id: Int, name: String, type: String, icon: String?): Call<CategoryActionResponse> {
         val request = CategoryRequest(name, type, icon)
         return categoryAPIService.updateCategory(id, request)
     }
 
-    override suspend fun deleteCategory(categoryId: Int): Response<CategoryActionResponse> {
+    override fun deleteCategory(categoryId: Int): Call<CategoryActionResponse> {
         return categoryAPIService.deleteCategory(categoryId)
     }
 }

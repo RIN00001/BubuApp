@@ -30,10 +30,6 @@ import com.example.todolistapp.views.components.item._ItemEditForm
 import com.example.todolistapp.views.components.item._ItemDelete
 import com.example.todolistapp.views.components.item.SwipeableItemCard
 
-// ==========================================
-// VIEW: ITEM LIST (TRANSAKSI)
-// Fitur: List, Add (Dialog + Wallet), Edit (Dialog + Wallet), Delete (Dialog)
-// ==========================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemsList(
@@ -45,8 +41,9 @@ fun ItemsList(
     val listState by itemViewModel.listState.collectAsState()
     val mutationState by itemViewModel.mutationState.collectAsState()
 
-    // 2. [BARU] State Data Wallet untuk Dropdown
+    // 2. State Data Dropdown (Wallet & Category)
     val walletList by itemViewModel.walletDropdownState.collectAsState()
+    val categoryList by itemViewModel.categoryDropdownState.collectAsState()
 
     // 3. State Dialogs
     var showAddDialog by remember { mutableStateOf(false) }
@@ -55,10 +52,11 @@ fun ItemsList(
 
     val context = LocalContext.current
 
-    // 4. Fetch Data (Items & Wallets) saat halaman dibuka
+    // 4. Fetch Data saat halaman dibuka
     LaunchedEffect(bookId) {
         itemViewModel.fetchItemsByBook(bookId)
-        itemViewModel.fetchWalletsForDropdown() // [BARU] Ambil data wallet
+        itemViewModel.fetchWalletsForDropdown()
+        itemViewModel.fetchCategoriesForDropdown()
     }
 
     // 5. Handle Feedback (Sukses/Gagal Simpan)
@@ -67,9 +65,9 @@ fun ItemsList(
             is ItemMutationStatusUIState.Success -> {
                 Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
                 itemViewModel.resetMutationState()
-                // Refresh data otomatis setelah mutasi sukses
+                // Refresh data
                 itemViewModel.fetchItemsByBook(bookId)
-                itemViewModel.fetchWalletsForDropdown() // Refresh wallet juga (biar saldo update)
+                itemViewModel.fetchWalletsForDropdown()
             }
             is ItemMutationStatusUIState.Failed -> {
                 Toast.makeText(context, state.error, Toast.LENGTH_SHORT).show()
@@ -188,10 +186,10 @@ fun ItemsList(
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     _ItemAddForm(
-                        wallets = walletList, // [BARU] Kirim list wallet ke form
-                        onSubmit = { name, amount, type, walletId ->
-                            // [BARU] Terima walletId dan kirim ke ViewModel
-                            itemViewModel.createItem(name, amount, type, bookId, walletId, null)
+                        wallets = walletList,
+                        categories = categoryList,
+                        onSubmit = { name, amount, type, walletId, categoryId ->
+                            itemViewModel.createItem(name, amount, type, bookId, walletId, categoryId)
                             showAddDialog = false
                         }
                     )
@@ -203,11 +201,11 @@ fun ItemsList(
         itemToEdit?.let { item ->
             _ItemEditForm(
                 item = item,
-                wallets = walletList, // [BARU] Kirim list wallet ke form edit
-                onSubmit = { name, amount, type, walletId ->
-                    // [BARU] Terima walletId update
+                wallets = walletList,
+                categories = categoryList,
+                onSubmit = { name, amount, type, walletId, categoryId ->
                     itemViewModel.updateItem(
-                        item.id, name, amount, type, bookId, walletId, item.categoryId
+                        item.id, name, amount, type, bookId, walletId, categoryId
                     )
                     itemToEdit = null
                 },

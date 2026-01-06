@@ -14,25 +14,33 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.todolistapp.models.CategoryModel
 import com.example.todolistapp.models.ItemModel
-import com.example.todolistapp.models.WalletModel // Pastikan import WalletModel
+import com.example.todolistapp.models.WalletModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun _ItemEditForm(
     item: ItemModel,
-    wallets: List<WalletModel>, // [BARU] List wallet
-    onSubmit: (name: String, amount: Double, type: String, walletId: Int?) -> Unit, // [BARU] walletId
+    wallets: List<WalletModel>,
+    categories: List<CategoryModel>,
+    onSubmit: (name: String, amount: Double, type: String, walletId: Int?, categoryId: Int?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(item.name) }
     var amount by remember { mutableStateOf(item.amount.toLong().toString()) }
     var selectedType by remember { mutableStateOf(item.type) }
 
-    // State Dropdown (Cari wallet yang ID-nya sama dengan item.walletId)
-    var expanded by remember { mutableStateOf(false) }
+    // State Dropdown Wallet (Cari wallet yang ID-nya sama dengan item.walletId)
+    var expandedWallet by remember { mutableStateOf(false) }
     var selectedWallet by remember {
         mutableStateOf(wallets.find { it.id == item.walletId })
+    }
+
+    // State Dropdown Category (Cari category yang ID-nya sama dengan item.categoryId)
+    var expandedCategory by remember { mutableStateOf(false) }
+    var selectedCategory by remember {
+        mutableStateOf(categories.find { it.id == item.categoryId })
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -74,10 +82,10 @@ fun _ItemEditForm(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // [BARU] Dropdown Wallet Edit
+                // Dropdown Wallet Edit
                 ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded },
+                    expanded = expandedWallet,
+                    onExpandedChange = { expandedWallet = !expandedWallet },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
@@ -85,20 +93,53 @@ fun _ItemEditForm(
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Wallet") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedWallet) },
                         colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
                     ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                        expanded = expandedWallet,
+                        onDismissRequest = { expandedWallet = false }
                     ) {
                         wallets.forEach { wallet ->
                             DropdownMenuItem(
                                 text = { Text(wallet.name) },
                                 onClick = {
                                     selectedWallet = wallet
-                                    expanded = false
+                                    expandedWallet = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Dropdown Category Edit
+                ExposedDropdownMenuBox(
+                    expanded = expandedCategory,
+                    onExpandedChange = { expandedCategory = !expandedCategory },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = selectedCategory?.name ?: "Pilih Kategori",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Kategori") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategory) },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedCategory,
+                        onDismissRequest = { expandedCategory = false }
+                    ) {
+                        categories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category.name) },
+                                onClick = {
+                                    selectedCategory = category
+                                    expandedCategory = false
                                 }
                             )
                         }
@@ -139,8 +180,8 @@ fun _ItemEditForm(
                     Button(
                         onClick = {
                             val amountDouble = amount.toDoubleOrNull() ?: 0.0
-                            // Kirim ID Wallet yang dipilih (bisa null jika user menghapus pilihan)
-                            onSubmit(name, amountDouble, selectedType, selectedWallet?.id)
+                            // Kirim ID Wallet dan Category yang dipilih
+                            onSubmit(name, amountDouble, selectedType, selectedWallet?.id, selectedCategory?.id)
                         },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)

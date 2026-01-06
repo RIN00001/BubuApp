@@ -1,12 +1,11 @@
 package com.example.todolistapp.services
 
-import com.example.todolistapp.models.CategoryModel
 import com.example.todolistapp.models.GetAllCategoriesResponse
+import com.example.todolistapp.models.CategoryModel
 import com.google.gson.annotations.SerializedName
-import retrofit2.Response
+import retrofit2.Call // Pastikan import ini ada
 import retrofit2.http.*
 
-// Model Body untuk Create & Update (Isinya sama: Name, Type, Icon)
 data class CategoryRequest(
     @SerializedName("name") val name: String,
     @SerializedName("type") val type: String,
@@ -19,26 +18,27 @@ data class CategoryActionResponse(
 )
 
 interface CategoryAPIService {
+    // TIDAK ADA 'suspend'
+    // RETURN TYPE ADALAH 'Call<...>'
 
     @GET("api/categories")
-    suspend fun getAllCategories(
+    fun getAllCategories(
         @Query("type") type: String? = null
-    ): Response<GetAllCategoriesResponse>
+    ): Call<GetAllCategoriesResponse>
 
     @POST("api/categories")
-    suspend fun createCategory(
+    fun createCategory(
         @Body request: CategoryRequest
-    ): Response<CategoryActionResponse>
+    ): Call<CategoryActionResponse>
 
-    // --- NEW: UPDATE ---
     @PUT("api/categories/{id}")
-    suspend fun updateCategory(
+    fun updateCategory(
         @Path("id") id: Int,
         @Body request: CategoryRequest
-    ): Response<CategoryActionResponse>
+    ): Call<CategoryActionResponse>
 
     @DELETE("api/categories/{id}")
-    suspend fun deleteCategory(
+    fun deleteCategory(
         @Path("id") categoryId: Int
-    ): Response<CategoryActionResponse>
+    ): Call<CategoryActionResponse>
 }
