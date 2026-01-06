@@ -75,8 +75,6 @@ class AppContainer(private val context: Context) : AppContainerInterface {
     private val categoryService: CategoryAPIService by lazy { retrofit.create(CategoryAPIService::class.java) }
     private val bookService: BookAPIService by lazy { retrofit.create(BookAPIService::class.java) }
     private val walletService: WalletAPIService by lazy { retrofit.create(WalletAPIService::class.java) }
-
-    // NEW: Saving Service
     private val savingService: SavingAPIService by lazy { retrofit.create(SavingAPIService::class.java) }
 
     // =========================================================================
