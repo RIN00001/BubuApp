@@ -177,11 +177,11 @@ fun SavingListApp(
                 bottomBar = {
                     NavigationBar(navController)
                 }
-            ) { padding ->
+            ) { innerPadding ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding)
+                        .padding(innerPadding)
                 ) {
                     HomeView(
                         navController = navController
@@ -195,11 +195,11 @@ fun SavingListApp(
                 bottomBar = {
                     NavigationBar(navController)
                 }
-            ) { padding ->
+            ) { innerPadding ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding)
+                        .padding(innerPadding)
                 ) {
                     SavingListView(
                         navController = navController

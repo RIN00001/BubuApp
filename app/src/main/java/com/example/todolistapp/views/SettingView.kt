@@ -43,10 +43,10 @@ fun SettingView(
         bottomBar = {
             NavigationBar(navController = navController)
         }
-    ) { paddingValues ->
+    ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(paddingValues)
+                .padding(innerPadding)
                 .fillMaxSize()
                 .padding(16.dp)
         ) {

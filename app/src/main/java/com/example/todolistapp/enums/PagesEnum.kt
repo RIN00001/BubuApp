@@ -3,6 +3,7 @@ package com.example.todolistapp.enums
 enum class PagesEnum {
 
     // AUTH
+    Intro,
     Login,
     Register,
 

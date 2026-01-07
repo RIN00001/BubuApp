@@ -63,10 +63,10 @@ fun HomeView(
                 Icon(Icons.Default.Add, contentDescription = "Add Item")
             }
         }
-    ) { paddingValues ->
+    ) { innerPadding ->
         Box(
             modifier = Modifier
-                .padding(paddingValues)
+                .padding(innerPadding)
                 .fillMaxSize()
         ) {
             when (uiState) {

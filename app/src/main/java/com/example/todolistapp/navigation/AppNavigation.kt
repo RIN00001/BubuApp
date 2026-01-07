@@ -69,13 +69,17 @@ fun AppNavigation(
 
     NavHost(
         navController = navController,
-        startDestination = PagesEnum.Login.name,
+        startDestination = PagesEnum.Intro.name,
         modifier = modifier
     ) {
 
         // ==========================================
         // 1. AUTHENTICATION FLOW
         // ==========================================
+        composable(PagesEnum.Intro.name) {
+            IntroView(navController = navController)
+        }
+
         composable(PagesEnum.Login.name) {
             LoginView(
                 authenticationViewModel = authVM,
@@ -295,10 +299,10 @@ fun SavingListView(navController: NavHostController) {
                 Icon(Icons.Default.Add, contentDescription = "Add Saving")
             }
         }
-    ) { paddingValues ->
+    ) { innerPadding ->
         Box(
             modifier = Modifier
-                .padding(paddingValues)
+                .padding(innerPadding)
                 .fillMaxSize()
                 .background(Color.White)
         ) {
@@ -372,10 +376,10 @@ fun SavingListViewWithNavBar(
                 Icon(Icons.Default.Add, contentDescription = "Add Saving")
             }
         }
-    ) { paddingValues ->
+    ) { innerPadding ->
         Box(
             modifier = Modifier
-                .padding(paddingValues)
+                .padding(innerPadding)
                 .fillMaxSize()
                 .background(Color.White)
         ) {

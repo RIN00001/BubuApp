@@ -63,10 +63,10 @@ fun BookDetailView(
                 )
             )
         }
-    ) { padding ->
+    ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(padding)
+                .padding(innerPadding)
                 .fillMaxSize()
                 .background(Color(0xFFFAFAFA))
                 .verticalScroll(rememberScrollState())

@@ -69,12 +69,12 @@ fun WalletAddEdit(
                 )
             )
         }
-    ) { padding ->
+    ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFFFE6E6))
-                .padding(padding)
+                .padding(innerPadding)
         ) {
             when {
                 isEditMode && detailState is WalletDetailStatusUIState.Success -> {

@@ -33,10 +33,10 @@ fun BookOnboardingView(
                 title = { Text("Buat Buku Pertama") }
             )
         }
-    ) { padding ->
+    ) { innerPadding ->
 
         Column(
-            modifier = Modifier.padding(padding),
+            modifier = Modifier.padding(innerPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 

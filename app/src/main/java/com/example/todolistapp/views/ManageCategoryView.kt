@@ -69,11 +69,11 @@ fun ManageCategoryView(
                 Icon(Icons.Default.Add, contentDescription = "Add Category")
             }
         }
-    ) { padding ->
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(innerPadding)
                 .background(Color(0xFFFDF7FF)) // Background putih sedikit ungu
         ) {
             // --- TAB ROW ---
@@ -144,7 +144,11 @@ fun ManageCategoryView(
                             onValueChange = { inputName = it },
                             label = { Text("Nama Kategori") },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.Black,
+                                unfocusedTextColor = Color.Black
+                            )
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))

@@ -40,7 +40,11 @@ fun _WalletAddForm(
             onValueChange = { name = it },
             label = { Text("Wallet Name") },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black
+            )
         )
 
         if (!isEditMode) {
@@ -49,7 +53,11 @@ fun _WalletAddForm(
                 onValueChange = { balanceText = it },
                 label = { Text("Balance") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                )
             )
         }
 

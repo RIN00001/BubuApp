@@ -1,22 +1,27 @@
 package com.example.todolistapp.views
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.todolistapp.R
 import com.example.todolistapp.uiStates.WalletSummaryStatusUIState
 import com.example.todolistapp.uiStates.BookListStatusUIState
 import com.example.todolistapp.viewModels.WalletViewModel
@@ -43,6 +48,7 @@ fun WalletDetailView(
     var attachedBookIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var hasChanges by remember { mutableStateOf(false) }
     var showSaveSuccess by remember { mutableStateOf(false) }
+    var isBulkBookExpanded by remember { mutableStateOf(false) }
 
     // Load initial data
     LaunchedEffect(walletId) {
@@ -73,7 +79,7 @@ fun WalletDetailView(
                 title = {
                     Text(
                         text = "Wallet Details",
-                        fontSize = 24.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
@@ -88,7 +94,7 @@ fun WalletDetailView(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF9B8FC7)
+                    containerColor = Color(0xFF8A75BD) // Teal color from mockup
                 )
             )
         },
@@ -127,23 +133,23 @@ fun WalletDetailView(
                             currentDateFilter.endDate
                         )
                     },
-                    containerColor = Color(0xFFAD88C6),
-                    shape = RoundedCornerShape(16.dp)
+                    containerColor = Color(0xFFAD88C5),
+                    modifier = Modifier.size(64.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Save,
+                    Image(
+                        painter = painterResource(id = R.drawable.walletdetails_save),
                         contentDescription = "Save Changes",
-                        tint = Color.White
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
         }
-    ) { padding ->
+    ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFFFE6E6))
-                .padding(padding)
+                .background(Color.White)
+                .padding(innerPadding)
         ) {
             when (summaryState) {
                 is WalletSummaryStatusUIState.Loading -> {
@@ -182,123 +188,234 @@ fun WalletDetailView(
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = Color.White
-                                )
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                             ) {
-                                Column(
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.Top
                                 ) {
-                                    Text(
-                                        text = "Wallet Name",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF1C1B1F)
+                                    Image(
+                                        painter = painterResource(id = R.drawable.walletdetails_walletname),
+                                        contentDescription = "Wallet Name",
+                                        modifier = Modifier.size(32.dp)
                                     )
-                                    OutlinedTextField(
-                                        value = editedName,
-                                        onValueChange = {
-                                            editedName = it
-                                            hasChanges = true
-                                        },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        placeholder = { Text("Enter wallet name") },
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = Color(0xFF7469B6),
-                                            unfocusedBorderColor = Color.LightGray
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "Wallet Name",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF1C1B1F)
                                         )
-                                    )
-                                    Text(
-                                        text = "Currency cannot be changed",
-                                        fontSize = 12.sp,
-                                        color = Color.Gray,
-                                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                                    )
+                                        OutlinedTextField(
+                                            value = editedName,
+                                            onValueChange = {
+                                                editedName = it
+                                                hasChanges = true
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            placeholder = { Text("Enter wallet name") },
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = Color(0xFF00BCD4),
+                                                unfocusedBorderColor = Color.LightGray,
+                                                focusedTextColor = Color.Black,
+                                                unfocusedTextColor = Color.Black
+                                            ),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        Text(
+                                            text = "Currency cannot be changed",
+                                            fontSize = 12.sp,
+                                            color = Color.Gray,
+                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                        )
+                                    }
                                 }
                             }
                         }
 
                         // Book Attachments Section
                         item {
-                            Card(
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color.White
-                                )
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp)
-                                ) {
-                                    val currentBook = books.find { it.id == currentBookId }
+                                val currentBook = books.find { it.id == currentBookId }
 
-                                    WalletBookAttachmentSection(
-                                        currentBookId = currentBookId,
-                                        currentBookName = currentBook?.name,
-                                        allBooks = books,
-                                        attachedBookIds = attachedBookIds,
-                                        onToggleBook = { bookId, isAttached ->
-                                            attachedBookIds = if (isAttached) {
-                                                attachedBookIds + bookId
-                                            } else {
-                                                attachedBookIds - bookId
-                                            }
-                                            hasChanges = true
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        // Books currently attached (Read-only display)
-                        item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFF5F5F5)
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Text(
-                                        text = "Currently Used In",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF1C1B1F)
-                                    )
-                                    if (summary.usedInBooks.isEmpty()) {
-                                        Text(
-                                            text = "Not attached to any book",
-                                            fontSize = 14.sp,
-                                            color = Color.Gray
-                                        )
-                                    } else {
-                                        summary.usedInBooks.forEach { book ->
-                                            Column(
-                                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                                // Use in Current Book
+                                if (currentBook != null) {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = Color.White
+                                        ),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.weight(1f)
                                             ) {
+                                                Image(
+                                                    painter = painterResource(id = R.drawable.walletdetails_currentmoney),
+                                                    contentDescription = "Current Book",
+                                                    modifier = Modifier.size(32.dp)
+                                                )
+                                                Column {
+                                                    Text(
+                                                        text = "Use in Current Book",
+                                                        fontSize = 14.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFF1C1B1F)
+                                                    )
+                                                    Text(
+                                                        text = currentBook.name,
+                                                        fontSize = 12.sp,
+                                                        color = Color.Gray
+                                                    )
+                                                }
+                                            }
+                                            Switch(
+                                                checked = currentBookId?.let { attachedBookIds.contains(it) } ?: false,
+                                                onCheckedChange = { isChecked ->
+                                                    currentBookId?.let { bookId ->
+                                                        attachedBookIds = if (isChecked) {
+                                                            attachedBookIds + bookId
+                                                        } else {
+                                                            attachedBookIds - bookId
+                                                        }
+                                                        hasChanges = true
+                                                    }
+                                                },
+                                                colors = SwitchDefaults.colors(
+                                                    checkedThumbColor = Color.White,
+                                                    checkedTrackColor = Color(0xFF00BCD4),
+                                                    uncheckedThumbColor = Color.White,
+                                                    uncheckedTrackColor = Color.LightGray
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Bulk Book Attach
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color.White
+                                    ),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        // Header (clickable to expand/collapse)
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable { isBulkBookExpanded = !isBulkBookExpanded }
+                                                .padding(16.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Image(
+                                                    painter = painterResource(id = R.drawable.walletdetails_bulkbook),
+                                                    contentDescription = "Bulk Book Attach",
+                                                    modifier = Modifier.size(32.dp)
+                                                )
                                                 Text(
-                                                    text = book.name,
+                                                    text = "Bulk Book Attach",
                                                     fontSize = 14.sp,
-                                                    fontWeight = FontWeight.Medium,
+                                                    fontWeight = FontWeight.Bold,
                                                     color = Color(0xFF1C1B1F)
                                                 )
-                                                Text(
-                                                    text = book.program,
-                                                    fontSize = 12.sp,
-                                                    color = Color.Gray
-                                                )
                                             }
-                                            if (book != summary.usedInBooks.last()) {
-                                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                            Icon(
+                                                imageVector = if (isBulkBookExpanded)
+                                                    Icons.Default.KeyboardArrowUp
+                                                else
+                                                    Icons.Default.KeyboardArrowDown,
+                                                contentDescription = if (isBulkBookExpanded) "Collapse" else "Expand",
+                                                tint = Color.Gray
+                                            )
+                                        }
+
+                                        // Expandable book list
+                                        if (isBulkBookExpanded) {
+                                            HorizontalDivider(color = Color(0xFFE0E0E0), thickness = 1.dp)
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                books.forEach { book ->
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(vertical = 8.dp),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Column(
+                                                            modifier = Modifier.weight(1f)
+                                                        ) {
+                                                            Text(
+                                                                text = book.name,
+                                                                fontSize = 14.sp,
+                                                                fontWeight = FontWeight.Medium,
+                                                                color = Color(0xFF1C1B1F)
+                                                            )
+                                                            Text(
+                                                                text = book.program ?: "",
+                                                                fontSize = 12.sp,
+                                                                color = Color.Gray
+                                                            )
+                                                        }
+                                                        Switch(
+                                                            checked = attachedBookIds.contains(book.id),
+                                                            onCheckedChange = { isChecked ->
+                                                                attachedBookIds = if (isChecked) {
+                                                                    attachedBookIds + book.id
+                                                                } else {
+                                                                    attachedBookIds - book.id
+                                                                }
+                                                                hasChanges = true
+                                                            },
+                                                            colors = SwitchDefaults.colors(
+                                                                checkedThumbColor = Color.White,
+                                                                checkedTrackColor = Color(0xFF00BCD4),
+                                                                uncheckedThumbColor = Color.White,
+                                                                uncheckedTrackColor = Color.LightGray
+                                                            )
+                                                        )
+                                                    }
+                                                    if (book != books.last()) {
+                                                        HorizontalDivider(
+                                                            modifier = Modifier.padding(vertical = 4.dp),
+                                                            color = Color(0xFFF0F0F0)
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                     }

@@ -26,7 +26,6 @@ import com.example.todolistapp.uiStates.WalletListStatusUIState
 import com.example.todolistapp.utils.formatRupiah
 import com.example.todolistapp.viewModels.WalletViewModel
 import com.example.todolistapp.views.components.wallet.SwipeableWalletCard
-import com.example.todolistapp.views.components.wallet.WalletTypeSection
 import com.example.todolistapp.views.components.wallet._WalletDeletePopUp
 
 @Composable
@@ -82,11 +81,11 @@ fun WalletView(
                 }
             }
         }
-    ) { padding ->
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFFFE6E6))
+                .background(Color.White)
         ) {
             // Purple Header
             Box(
@@ -168,7 +167,7 @@ fun WalletView(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .padding(innerPadding)
             ) {
                 when (listState) {
                     is WalletListStatusUIState.Loading -> {
@@ -192,47 +191,27 @@ fun WalletView(
                                 color = Color.Gray
                             )
                         } else {
-                            // Group wallets by type
-                            val groupedWallets = wallets.groupBy { wallet ->
-                                // Simple categorization - you can enhance this logic
-                                when {
-                                    wallet.name.contains("card", ignoreCase = true) -> "Debit Card"
-                                    wallet.name.contains("cash", ignoreCase = true) -> "Cash"
-                                    else -> "Other"
-                                }
-                            }
-
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                groupedWallets.forEach { (type, walletsInType) ->
-                                    item {
-                                        WalletTypeSection(
-                                            type = type,
-                                            totalAssets = walletsInType.sumOf { it.balance },
-                                            hideValues = hideValues
-                                        )
-                                    }
-
-                                    items(walletsInType) { wallet ->
-                                        SwipeableWalletCard(
-                                            wallet = wallet,
-                                            hideValues = hideValues,
-                                            canDelete = wallets.size > 1,
-                                            onClick = {
-                                                navController.navigate(
-                                                    PagesEnum.WalletDetail.name + "/${wallet.id}"
-                                                )
-                                            },
-                                            onDelete = {
-                                                if (wallets.size > 1) {
-                                                    walletToDelete = wallet
-                                                }
+                                items(wallets) { wallet ->
+                                    SwipeableWalletCard(
+                                        wallet = wallet,
+                                        hideValues = hideValues,
+                                        canDelete = wallets.size > 1,
+                                        onClick = {
+                                            navController.navigate(
+                                                PagesEnum.WalletDetail.name + "/${wallet.id}"
+                                            )
+                                        },
+                                        onDelete = {
+                                            if (wallets.size > 1) {
+                                                walletToDelete = wallet
                                             }
-                                        )
-                                    }
+                                        }
+                                    )
                                 }
                             }
                         }

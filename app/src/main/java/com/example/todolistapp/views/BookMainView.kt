@@ -135,12 +135,12 @@ fun BookMainView(
                 Icon(Icons.Outlined.Add, contentDescription = "Add Item", tint = Color.White)
             }
         }
-    ) { padding ->
+    ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFFFE6E6)) // Background Merah Muda Soft sesuai desainmu
-                .padding(padding)
+                .padding(innerPadding)
         ) {
             LazyColumn(
                 contentPadding = PaddingValues(bottom = 80.dp), // Beri ruang agar tidak tertutup FAB

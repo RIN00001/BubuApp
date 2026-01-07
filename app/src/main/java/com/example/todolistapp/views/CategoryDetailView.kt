@@ -67,8 +67,8 @@ fun CategoryDetailView(
                 Icon(Icons.Default.Add, contentDescription = "Add Item")
             }
         }
-    ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+    ) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             when (uiState) {
                 is HomeUIState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))

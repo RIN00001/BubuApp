@@ -39,11 +39,11 @@ fun WalletListView(
                 Text("+")
             }
         }
-    ) { padding ->
+    ) { innerPadding ->
 
         Column(
             modifier = Modifier
-                .padding(padding)
+                .padding(innerPadding)
                 .fillMaxSize()
         ) {
 
